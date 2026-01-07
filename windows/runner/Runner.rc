@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "aif2f" "\0"
+            VALUE "FileDescription", "AI面对面" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "aif2f" "\0"
+            VALUE "InternalName", "AI面对面" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "aif2f.exe" "\0"
-            VALUE "ProductName", "aif2f" "\0"
+            VALUE "OriginalFilename", "AI面对面.exe" "\0"
+            VALUE "ProductName", "AI面对面" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
