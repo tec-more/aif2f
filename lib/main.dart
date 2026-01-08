@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'pages/home_page.dart';
-import 'pages/translate_page.dart';
-import 'pages/scene_selection_page.dart';
-import 'pages/profile_page.dart';
+import 'interpret/view/interpret_view.dart';
+import 'user/view/user_menu.dart';
+import 'scene/view/scene_menu.dart';
+import 'scene/model/scene_model.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,116 +21,51 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-
-        textTheme: const TextTheme(
-          headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          bodyLarge: TextStyle(fontSize: 16),
-          bodyMedium: TextStyle(fontSize: 14),
-        ),
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {TargetPlatform.windows: CupertinoPageTransitionsBuilder()},
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            textStyle: const TextStyle(fontSize: 16),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            textStyle: const TextStyle(fontSize: 16),
-          ),
-        ),
+        popupMenuTheme: const PopupMenuThemeData(color: Colors.white),
       ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const MainScreen(),
-        '/home': (context) => const HomePage(),
-        '/translate': (context) => const InterpretPage(),
-        '/scene': (context) => const SceneSelectionPage(),
-        '/profile': (context) => const ProfilePage(),
-      },
+      home: const RootPage(),
     );
   }
 }
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+/// 根页面 - 包含Scaffold和AppBar
+class RootPage extends StatefulWidget {
+  const RootPage({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<RootPage> createState() => _RootPageState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+class _RootPageState extends State<RootPage> {
+  // 设置场景菜单默认选项为演讲
+  SceneType _selectedScene = SceneType.interpretation;
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    const InterpretPage(),
-    const SceneSelectionPage(),
-    const ProfilePage(),
-  ];
+  // 处理场景选择的回调函数
+  void _handleSceneSelected(SceneType type) {
+    setState(() {
+      _selectedScene = type;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+      appBar: AppBar(
+        title: const Text('AI面对面'),
+        centerTitle: true,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        actions: [
+          // 场景菜单按钮（用户菜单左边）
+          SceneMenu(
+            selectedScene: _selectedScene,
+            onSceneSelected: _handleSceneSelected,
           ),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.only(top: 10),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Theme.of(context).primaryColor,
-          unselectedItemColor: Colors.grey,
-          selectedFontSize: 14,
-          unselectedFontSize: 14,
-          showSelectedLabels: true,
-          showUnselectedLabels: true,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedIconTheme: IconThemeData(
-            size: 24,
-            color: Theme.of(context).primaryColor,
-          ),
-          unselectedIconTheme: const IconThemeData(
-            size: 22,
-            color: Colors.grey,
-          ),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
-            BottomNavigationBarItem(icon: Icon(Icons.translate), label: '传译'),
-            BottomNavigationBarItem(icon: Icon(Icons.lightbulb), label: '场景'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
-          ],
-        ),
+          // 用户菜单按钮，放置在右上角
+          const UserMenu(),
+        ],
       ),
+      body: const InterpretView(),
     );
   }
 }
