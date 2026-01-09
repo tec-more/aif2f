@@ -31,7 +31,6 @@ setup/win32/static/postgresql*.exe
 
 # various virtualenv
 /bin/
-/tool/
 /build/
 /dist/
 /include/

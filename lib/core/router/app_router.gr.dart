@@ -27,17 +27,64 @@ class AboutRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [HomePage]
-class HomeRoute extends PageRouteInfo<void> {
-  const HomeRoute({List<PageRouteInfo>? children})
-    : super(HomeRoute.name, initialChildren: children);
+/// [ActivityScenePage]
+class ActivitySceneRoute extends PageRouteInfo<ActivitySceneRouteArgs> {
+  ActivitySceneRoute({
+    Key? key,
+    required SceneType sceneType,
+    List<PageRouteInfo>? children,
+  }) : super(
+         ActivitySceneRoute.name,
+         args: ActivitySceneRouteArgs(key: key, sceneType: sceneType),
+         initialChildren: children,
+       );
 
-  static const String name = 'HomeRoute';
+  static const String name = 'ActivitySceneRoute';
 
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      return const HomePage();
+      final args = data.argsAs<ActivitySceneRouteArgs>();
+      return ActivityScenePage(key: args.key, sceneType: args.sceneType);
+    },
+  );
+}
+
+class ActivitySceneRouteArgs {
+  const ActivitySceneRouteArgs({this.key, required this.sceneType});
+
+  final Key? key;
+
+  final SceneType sceneType;
+
+  @override
+  String toString() {
+    return 'ActivitySceneRouteArgs{key: $key, sceneType: $sceneType}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! ActivitySceneRouteArgs) return false;
+    return key == other.key && sceneType == other.sceneType;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ sceneType.hashCode;
+}
+
+/// generated route for
+/// [EducationScenePage]
+class EducationSceneRoute extends PageRouteInfo<void> {
+  const EducationSceneRoute({List<PageRouteInfo>? children})
+    : super(EducationSceneRoute.name, initialChildren: children);
+
+  static const String name = 'EducationSceneRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const EducationScenePage();
     },
   );
 }
@@ -54,6 +101,38 @@ class InterpretRoute extends PageRouteInfo<void> {
     name,
     builder: (data) {
       return const InterpretView();
+    },
+  );
+}
+
+/// generated route for
+/// [MeetingScenePage]
+class MeetingSceneRoute extends PageRouteInfo<void> {
+  const MeetingSceneRoute({List<PageRouteInfo>? children})
+    : super(MeetingSceneRoute.name, initialChildren: children);
+
+  static const String name = 'MeetingSceneRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const MeetingScenePage();
+    },
+  );
+}
+
+/// generated route for
+/// [PresentationScenePage]
+class PresentationSceneRoute extends PageRouteInfo<void> {
+  const PresentationSceneRoute({List<PageRouteInfo>? children})
+    : super(PresentationSceneRoute.name, initialChildren: children);
+
+  static const String name = 'PresentationSceneRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const PresentationScenePage();
     },
   );
 }
