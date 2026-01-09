@@ -1,12 +1,11 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/foundation.dart';
-import 'package:aif2f/core/view/main_page.dart';
 import 'package:aif2f/interpret/view/interpret_view.dart';
 import 'package:aif2f/scene/model/scene_model.dart';
+import 'package:aif2f/scene/view/activity_scene_page.dart';
 import 'package:aif2f/scene/view/education_scene_page.dart';
 import 'package:aif2f/scene/view/meeting_scene_page.dart';
 import 'package:aif2f/scene/view/presentation_scene_page.dart';
-import 'package:aif2f/scene/view/activity_scene_page.dart';
 import 'package:aif2f/user/view/about_page.dart';
 import 'package:aif2f/user/view/profile_page.dart';
 import 'package:aif2f/user/view/settings_page.dart';
@@ -24,6 +23,13 @@ class AppRoutes {
   static final interpret = AutoRoute(
     page: InterpretRoute.page,
     path: '/interpret',
+    initial: true,
+  );
+
+  /// ActivityScene页面 (scene 模块)
+  static final activityScene = AutoRoute(
+    page: ActivitySceneRoute.page,
+    path: '/scene/activityscene',
   );
 
   /// EducationScene页面 (scene 模块)
@@ -44,12 +50,6 @@ class AppRoutes {
     path: '/scene/presentationscene',
   );
 
-  /// ActivityScene页面 (scene 模块)
-  static final activityScene = AutoRoute(
-    page: ActivitySceneRoute.page,
-    path: '/scene/activityscene',
-  );
-
   /// About页面 (user 模块)
   static final about = AutoRoute(page: AboutRoute.page, path: '/user/about');
 
@@ -65,21 +65,17 @@ class AppRoutes {
     path: '/user/settings',
   );
 
-  /// Main页面 (core 模块)
-  static final main = AutoRoute(page: MainRoute.page, path: '/', initial: true);
-
   /// 所有路由的集合
   /// 在 AppRouter 中直接使用此集合来简化配置
   static final List<AutoRoute> all = [
     interpret,
+    activityScene,
     educationScene,
     meetingScene,
     presentationScene,
-    activityScene,
     about,
     profile,
     settings,
-    main,
   ];
 }
 

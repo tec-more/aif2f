@@ -6,22 +6,19 @@ import 'package:aif2f/core/router/app_router.dart';
 class SceneMenu extends StatelessWidget {
   final SceneType selectedScene;
 
-  const SceneMenu({
-    super.key,
-    required this.selectedScene,
-  });
+  const SceneMenu({super.key, required this.selectedScene});
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       onSelected: (value) => _handleMenuSelection(context, value),
       itemBuilder: (context) => _buildMenuItems(context),
-      tooltip: '场景和活动',
+      tooltip: '场景',
       child: IconButton(
         icon: const Icon(Icons.apps, color: Colors.white),
         onPressed: null,
-        tooltip: '场景和活动',
-        hoverColor: Colors.white.withOpacity(0.2),
+        tooltip: '场景',
+        hoverColor: Colors.white.withValues(alpha: 0.2),
         splashColor: Colors.transparent,
       ),
     );
@@ -47,7 +44,9 @@ class SceneMenu extends StatelessWidget {
               Text(
                 scene.name,
                 style: TextStyle(
-                  fontWeight: scene.type == selectedScene ? FontWeight.bold : null,
+                  fontWeight: scene.type == selectedScene
+                      ? FontWeight.bold
+                      : null,
                 ),
               ),
             ],
@@ -55,23 +54,6 @@ class SceneMenu extends StatelessWidget {
         ),
       );
     }
-
-    // 添加分隔线
-    items.add(const PopupMenuDivider());
-
-    // 添加"查看活动"选项
-    items.add(
-      PopupMenuItem<String>(
-        value: 'activity',
-        child: Row(
-          children: [
-            const Icon(Icons.event_note, color: Colors.black),
-            const SizedBox(width: 10),
-            Text('查看${_getSceneName()}活动'),
-          ],
-        ),
-      ),
-    );
 
     return items;
   }
@@ -95,26 +77,10 @@ class SceneMenu extends StatelessWidget {
         case SceneType.education:
           context.router.push(const EducationSceneRoute());
           break;
+        case SceneType.activity:
+          context.router.push(const ActivitySceneRoute());
+          break;
       }
-    } else if (value == 'activity') {
-      // 处理查看活动
-      context.router.push(
-        ActivitySceneRoute(sceneType: selectedScene),
-      );
-    }
-  }
-
-  String _getSceneName() {
-    switch (selectedScene) {
-      case SceneType.interpretation:
-        return '传译';
-      case SceneType.presentation:
-        return '演讲';
-      case SceneType.meeting:
-        return '会议';
-      case SceneType.education:
-        return '教育';
     }
   }
 }
-

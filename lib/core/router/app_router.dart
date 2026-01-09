@@ -1,7 +1,5 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:flutter/foundation.dart';
 import 'package:aif2f/interpret/view/interpret_view.dart';
-import 'package:aif2f/scene/model/scene_model.dart';
 import 'package:aif2f/scene/view/activity_scene_page.dart';
 import 'package:aif2f/scene/view/education_scene_page.dart';
 import 'package:aif2f/scene/view/meeting_scene_page.dart';

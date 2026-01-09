@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:auto_route/auto_route.dart';
 import 'package:aif2f/interpret/model/interpret_model.dart';
 import 'package:aif2f/interpret/viewmodel/interpret_view_model.dart';
+import 'package:aif2f/scene/model/scene_model.dart';
+import 'package:aif2f/scene/view/scene_menu.dart';
+import 'package:aif2f/user/view/user_menu.dart';
 
 /// 传译功能的视图
 @RoutePage(name: 'InterpretRoute')
@@ -26,9 +29,22 @@ class _InterpretViewContent extends StatelessWidget {
     final viewModel = Provider.of<InterpretViewModel>(context);
     final textController = TextEditingController();
 
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('AI传译'),
+        centerTitle: true,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        actions: [
+          // 场景菜单按钮
+          SceneMenu(selectedScene: SceneType.interpretation),
+          // 用户菜单按钮
+          const UserMenu(),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 语言选择区
@@ -284,6 +300,7 @@ class _InterpretViewContent extends StatelessWidget {
             activeThumbColor: Theme.of(context).primaryColor,
           ),
         ],
+      ),
       ),
     );
   }

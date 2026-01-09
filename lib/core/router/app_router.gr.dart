@@ -28,49 +28,18 @@ class AboutRoute extends PageRouteInfo<void> {
 
 /// generated route for
 /// [ActivityScenePage]
-class ActivitySceneRoute extends PageRouteInfo<ActivitySceneRouteArgs> {
-  ActivitySceneRoute({
-    Key? key,
-    required SceneType sceneType,
-    List<PageRouteInfo>? children,
-  }) : super(
-         ActivitySceneRoute.name,
-         args: ActivitySceneRouteArgs(key: key, sceneType: sceneType),
-         initialChildren: children,
-       );
+class ActivitySceneRoute extends PageRouteInfo<void> {
+  const ActivitySceneRoute({List<PageRouteInfo>? children})
+    : super(ActivitySceneRoute.name, initialChildren: children);
 
   static const String name = 'ActivitySceneRoute';
 
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      final args = data.argsAs<ActivitySceneRouteArgs>();
-      return ActivityScenePage(key: args.key, sceneType: args.sceneType);
+      return const ActivityScenePage();
     },
   );
-}
-
-class ActivitySceneRouteArgs {
-  const ActivitySceneRouteArgs({this.key, required this.sceneType});
-
-  final Key? key;
-
-  final SceneType sceneType;
-
-  @override
-  String toString() {
-    return 'ActivitySceneRouteArgs{key: $key, sceneType: $sceneType}';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! ActivitySceneRouteArgs) return false;
-    return key == other.key && sceneType == other.sceneType;
-  }
-
-  @override
-  int get hashCode => key.hashCode ^ sceneType.hashCode;
 }
 
 /// generated route for
