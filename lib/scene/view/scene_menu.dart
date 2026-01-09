@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../model/scene_model.dart';
+import 'package:aif2f/scene/model/scene_model.dart';
 
 class SceneMenu extends StatelessWidget {
   final SceneType selectedScene;
   final Function(SceneType) onSceneSelected;
 
   const SceneMenu({
-    Key? key,
+    super.key,
     required this.selectedScene,
     required this.onSceneSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +41,7 @@ class SceneMenu extends StatelessWidget {
           );
         }).toList();
       },
+      tooltip: '切换场景',
       // 使用child确保图标在悬停时仍然可见
       child: IconButton(
         icon: const Icon(Icons.apps, color: Colors.white),
@@ -49,7 +50,6 @@ class SceneMenu extends StatelessWidget {
         hoverColor: Colors.white.withOpacity(0.2), // 设置半透明的悬停背景
         splashColor: Colors.transparent, // 移除点击水波纹效果
       ),
-      tooltip: '切换场景',
     );
   }
 }

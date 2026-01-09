@@ -1,7 +1,9 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:aif2f/core/router/app_router.dart';
 
 class UserMenu extends StatelessWidget {
-  const UserMenu({Key? key}) : super(key: key);
+  const UserMenu({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -9,13 +11,16 @@ class UserMenu extends StatelessWidget {
       onSelected: (value) {
         switch (value) {
           case 'profile':
-            _showProfile(context);
+            // 使用路由导航到个人信息页面
+            context.router.push(ProfileRoute());
             break;
           case 'settings':
-            _showSettings(context);
+            // 使用路由导航到设置页面
+            context.router.push(SettingsRoute());
             break;
           case 'about':
-            _showAbout(context);
+            // 使用路由导航到关于页面
+            context.router.push(AboutRoute());
             break;
           case 'logout':
             _showLogoutConfirmation(context);
@@ -67,6 +72,7 @@ class UserMenu extends StatelessWidget {
           ),
         ];
       },
+      tooltip: '用户菜单',
       // 使用child确保图标在悬停时仍然可见
       child: IconButton(
         icon: const Icon(Icons.person, color: Colors.white),
@@ -74,55 +80,6 @@ class UserMenu extends StatelessWidget {
         tooltip: '用户菜单',
         hoverColor: Colors.white.withOpacity(0.2), // 设置半透明的悬停背景
         splashColor: Colors.transparent, // 移除点击水波纹效果
-      ),
-      tooltip: '用户菜单',
-    );
-  }
-
-  void _showProfile(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('个人信息'),
-        content: const Text('个人信息页面'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSettings(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('设置'),
-        content: const Text('设置页面'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAbout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('关于'),
-        content: const Text('AI面对面 - 智能对话应用\n版本 1.0.0'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-        ],
       ),
     );
   }

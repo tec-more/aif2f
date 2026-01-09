@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../model/interpret_model.dart';
+import 'package:aif2f/interpret/model/interpret_model.dart';
 
 class InterpretViewModel extends ChangeNotifier {
   final TranslationConfig config;

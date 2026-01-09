@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../model/interpret_model.dart';
-import '../viewmodel/interpret_view_model.dart';
+import 'package:auto_route/auto_route.dart';
+import 'package:aif2f/interpret/model/interpret_model.dart';
+import 'package:aif2f/interpret/viewmodel/interpret_view_model.dart';
 
 /// 传译功能的视图
+@RoutePage(name: 'InterpretRoute')
 class InterpretView extends StatelessWidget {
   const InterpretView({super.key});
 
@@ -36,7 +38,7 @@ class _InterpretViewContent extends StatelessWidget {
               // 源语言选择
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: viewModel.config.sourceLanguage,
+                  initialValue: viewModel.config.sourceLanguage,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     labelText: '源语言',
@@ -65,7 +67,7 @@ class _InterpretViewContent extends StatelessWidget {
               // 目标语言选择
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: viewModel.config.targetLanguage,
+                  initialValue: viewModel.config.targetLanguage,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     labelText: '目标语言',
@@ -209,7 +211,7 @@ class _InterpretViewContent extends StatelessWidget {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: viewModel.config.selectedVoice,
+                  initialValue: viewModel.config.selectedVoice,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     labelText: '播报音色',
@@ -279,7 +281,7 @@ class _InterpretViewContent extends StatelessWidget {
             title: const Text('自动播放翻译结果'),
             value: viewModel.config.isAutoPlay,
             onChanged: (_) => viewModel.toggleAutoPlay(),
-            activeColor: Theme.of(context).primaryColor,
+            activeThumbColor: Theme.of(context).primaryColor,
           ),
         ],
       ),
