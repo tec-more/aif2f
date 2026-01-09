@@ -4,21 +4,21 @@ import 'package:aif2f/scene/model/scene_model.dart';
 import 'package:aif2f/scene/view/scene_menu.dart';
 import 'package:aif2f/user/view/user_menu.dart';
 
-/// 演讲场景页面
+/// 面试场景页面
 @RoutePage()
-class PresentationScenePage extends StatelessWidget {
-  const PresentationScenePage({super.key});
+class InterviewScenePage extends StatelessWidget {
+  const InterviewScenePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('演讲场景'),
+        title: const Text('面试场景'),
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
-          SceneMenu(selectedScene: SceneType.presentation),
+          SceneMenu(selectedScene: SceneType.interview),
           const UserMenu(),
         ],
       ),
@@ -27,13 +27,13 @@ class PresentationScenePage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.present_to_all,
+              Icons.badge,
               size: 80,
-              color: Colors.blue,
+              color: Colors.purple,
             ),
             SizedBox(height: 20),
             Text(
-              '演讲场景',
+              '面试场景',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),

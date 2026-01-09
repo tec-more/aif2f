@@ -7,6 +7,7 @@ enum SceneType {
   meeting, // 会议
   education, // 教育
   activity, // 活动
+  interview, // 面试
 }
 
 /// 场景信息
@@ -20,9 +21,14 @@ class Scene {
 
 /// 所有场景
 List<Scene> allScenes = [
-  Scene(type: SceneType.interpretation, name: '传译', icon: Icons.translate),
+  Scene(
+    type: SceneType.interpretation,
+    name: '传译',
+    icon: Icons.interpreter_mode_outlined,
+  ),
   Scene(type: SceneType.presentation, name: '演讲', icon: Icons.present_to_all),
   Scene(type: SceneType.meeting, name: '会议', icon: Icons.meeting_room),
   Scene(type: SceneType.education, name: '教育', icon: Icons.school),
   Scene(type: SceneType.activity, name: '活动', icon: Icons.event_note),
+  Scene(type: SceneType.interview, name: '面试', icon: Icons.badge),
 ];

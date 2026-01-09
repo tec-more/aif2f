@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:aif2f/interpret/view/interpret_view.dart';
 import 'package:aif2f/scene/view/activity_scene_page.dart';
 import 'package:aif2f/scene/view/education_scene_page.dart';
+import 'package:aif2f/scene/view/interview_scene_page.dart';
 import 'package:aif2f/scene/view/meeting_scene_page.dart';
 import 'package:aif2f/scene/view/presentation_scene_page.dart';
 import 'package:aif2f/user/view/about_page.dart';
@@ -18,11 +19,7 @@ class AppRoutes {
   AppRoutes._();
 
   /// Interpret视图 (interpret 模块)
-  static final interpret = AutoRoute(
-    page: InterpretRoute.page,
-    path: '/interpret',
-    initial: true,
-  );
+  static final interpret = AutoRoute(page: InterpretRoute.page, path: '/');
 
   /// ActivityScene页面 (scene 模块)
   static final activityScene = AutoRoute(
@@ -48,6 +45,12 @@ class AppRoutes {
     path: '/scene/presentationscene',
   );
 
+  /// InterviewScene页面 (scene 模块)
+  static final interviewScene = AutoRoute(
+    page: InterviewSceneRoute.page,
+    path: '/scene/interviewscene',
+  );
+
   /// About页面 (user 模块)
   static final about = AutoRoute(page: AboutRoute.page, path: '/user/about');
 
@@ -69,6 +72,7 @@ class AppRoutes {
     interpret,
     activityScene,
     educationScene,
+    interviewScene,
     meetingScene,
     presentationScene,
     about,

@@ -1,5 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:aif2f/scene/model/scene_model.dart';
+import 'package:aif2f/scene/view/scene_menu.dart';
+import 'package:aif2f/user/view/user_menu.dart';
 
 /// 会议场景页面
 @RoutePage()
@@ -14,6 +17,10 @@ class MeetingScenePage extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          SceneMenu(selectedScene: SceneType.meeting),
+          const UserMenu(),
+        ],
       ),
       body: const Center(
         child: Column(

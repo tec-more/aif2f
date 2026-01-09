@@ -75,6 +75,22 @@ class InterpretRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [InterviewScenePage]
+class InterviewSceneRoute extends PageRouteInfo<void> {
+  const InterviewSceneRoute({List<PageRouteInfo>? children})
+    : super(InterviewSceneRoute.name, initialChildren: children);
+
+  static const String name = 'InterviewSceneRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const InterviewScenePage();
+    },
+  );
+}
+
+/// generated route for
 /// [MeetingScenePage]
 class MeetingSceneRoute extends PageRouteInfo<void> {
   const MeetingSceneRoute({List<PageRouteInfo>? children})

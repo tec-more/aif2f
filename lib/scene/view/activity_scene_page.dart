@@ -1,7 +1,10 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:aif2f/scene/model/scene_model.dart';
+import 'package:aif2f/scene/view/scene_menu.dart';
+import 'package:aif2f/user/view/user_menu.dart';
 
-/// 会议场景页面
+/// 活动场景页面
 @RoutePage()
 class ActivityScenePage extends StatelessWidget {
   const ActivityScenePage({super.key});
@@ -12,8 +15,12 @@ class ActivityScenePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('活动场景'),
         centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          SceneMenu(selectedScene: SceneType.activity),
+          const UserMenu(),
+        ],
       ),
       body: const Center(
         child: Column(

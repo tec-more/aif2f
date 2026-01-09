@@ -29,7 +29,7 @@ void main() {
     // 尝试多个可能的目录位置
     final possibleDirs = [
       Directory(p.join('lib', module, 'view')),
-      Directory(p.join('lib', module)),  // 某些模块可能直接在模块根目录
+      Directory(p.join('lib', module)), // 某些模块可能直接在模块根目录
     ];
 
     Directory? targetDir;
@@ -57,25 +57,31 @@ void main() {
       // 检查是否包含 @RoutePage 注解
       if (content.contains('@RoutePage(') || content.contains('@RoutePage()')) {
         // 提取类名
-        final classNameMatch = RegExp(r'class\s+(\w+)\s+extends').firstMatch(content);
+        final classNameMatch = RegExp(
+          r'class\s+(\w+)\s+extends',
+        ).firstMatch(content);
         if (classNameMatch != null) {
           final className = classNameMatch.group(1)!;
 
           // 提取自定义路由名称（如果有）
-          final routeNameMatch = RegExp(r"@RoutePage\(\s*name:\s*'([^']+)'").firstMatch(content);
+          final routeNameMatch = RegExp(
+            r"@RoutePage\(\s*name:\s*'([^']+)'",
+          ).firstMatch(content);
           final routeName = routeNameMatch != null
               ? routeNameMatch.group(1)!
               : _toRouteName(className);
 
           final routePath = _generateRoutePath(module, className);
 
-          routePages.add(RoutePageInfo(
-            className: className,
-            routeName: routeName,
-            routePath: routePath,
-            module: module,
-            importPath: _getImportPath(file.path),
-          ));
+          routePages.add(
+            RoutePageInfo(
+              className: className,
+              routeName: routeName,
+              routePath: routePath,
+              module: module,
+              importPath: _getImportPath(file.path),
+            ),
+          );
 
           print('✅ 找到路由页面: $className -> $routeName');
         }
@@ -193,11 +199,8 @@ String _toRouteName(String className) {
 
 /// 生成路由路径
 String _generateRoutePath(String module, String className) {
-  // MainPage 作为首页，使用根路径
-  if (className == 'MainPage') return '/';
-
   // InterpretView 使用 /interpret 路径
-  if (className == 'InterpretView') return '/interpret';
+  if (className == 'InterpretView' || className == 'MainPage') return '/';
 
   // 其他页面使用模块名
   final pageName = className
@@ -221,9 +224,7 @@ String _generateVariableName(String className) {
 
 /// 生成注释
 String _generateComment(String className, String module) {
-  final comment = className
-      .replaceAll('Page', '页面')
-      .replaceAll('View', '视图');
+  final comment = className.replaceAll('Page', '页面').replaceAll('View', '视图');
   return '$comment ($module 模块)';
 }
 

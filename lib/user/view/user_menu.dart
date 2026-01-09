@@ -75,7 +75,7 @@ class UserMenu extends StatelessWidget {
       tooltip: '用户菜单',
       // 使用child确保图标在悬停时仍然可见
       child: IconButton(
-        icon: const Icon(Icons.person, color: Colors.white),
+        icon: const Icon(Icons.person_outline, color: Colors.white),
         onPressed: null, // PopupMenuButton会处理点击事件
         tooltip: '用户菜单',
         hoverColor: Colors.white.withOpacity(0.2), // 设置半透明的悬停背景
