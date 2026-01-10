@@ -14,11 +14,17 @@ class MyApp extends StatelessWidget {
       title: 'AI面对面',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0078D4), // Windows 11 蓝色
+          seedColor: const Color(0xFF6366F1), // 靛蓝色 - 主色调
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        popupMenuTheme: const PopupMenuThemeData(color: Colors.white),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
       ),
       routerConfig: AppRouter().config(),
     );
