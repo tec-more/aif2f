@@ -121,6 +121,8 @@ class _InterpretViewState extends State<InterpretView> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildLayoutPopupWindow()),
                     ],
                   ),
                 ),
@@ -161,7 +163,7 @@ class _InterpretViewState extends State<InterpretView> {
                                       size: 20,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 8),
                                   Text(
                                     _sourceLanguage,
                                     style: TextStyle(
@@ -385,6 +387,240 @@ class _InterpretViewState extends State<InterpretView> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLayoutPopupWindow() {
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.more_horiz_rounded, size: 24),
+          onPressed: () {
+            // 使用showMenu实现跟随按钮的弹出菜单
+            final RenderBox button = context.findRenderObject() as RenderBox;
+            final RenderBox overlay =
+                Overlay.of(context).context.findRenderObject() as RenderBox;
+            final RelativeRect position = RelativeRect.fromRect(
+              Rect.fromPoints(
+                button.localToGlobal(
+                  Offset(button.size.width, button.size.height),
+                  ancestor: overlay,
+                ),
+                button.localToGlobal(
+                  Offset(button.size.width, button.size.height),
+                  ancestor: overlay,
+                ),
+              ),
+              Offset.zero & overlay.size,
+            );
+
+            // 使用showMenu实现弹出框，确保它始终跟随按钮移动
+            showMenu(
+              context: context,
+              position: position,
+              items: [
+                PopupMenuItem(
+                  padding: EdgeInsets.zero,
+                  child: Container(
+                    width: 280, // 足够的宽度，避免溢出
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 字号部分 - 标题和按钮同一行
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                '字号',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      // 减小字号
+                                    },
+                                    child: const Text(
+                                      'A-',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  TextButton(
+                                    onPressed: () {
+                                      // 增大字号
+                                    },
+                                    child: const Text(
+                                      'A+',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 面板部分 - 标题和按钮同一行
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                '面板',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      // 单面板
+                                    },
+                                    child: const Text(
+                                      '□',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  TextButton(
+                                    onPressed: () {
+                                      // 双面板
+                                    },
+                                    style: ButtonStyle(
+                                      backgroundColor:
+                                          MaterialStateProperty.all(
+                                            Colors.grey[200],
+                                          ),
+                                    ),
+                                    child: const Text(
+                                      '◻◻',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 文本部分 - 标题和按钮同一行
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                '文本',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      // 文本布局1
+                                    },
+                                    style: ButtonStyle(
+                                      padding: MaterialStateProperty.all(
+                                        const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      '≡',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton(
+                                    onPressed: () {
+                                      // 文本布局2
+                                    },
+                                    style: ButtonStyle(
+                                      padding: MaterialStateProperty.all(
+                                        const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      '≡',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton(
+                                    onPressed: () {
+                                      // 文本布局3
+                                    },
+                                    style: ButtonStyle(
+                                      padding: MaterialStateProperty.all(
+                                        const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      '≡',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton(
+                                    onPressed: () {
+                                      // 文本布局4
+                                    },
+                                    style: ButtonStyle(
+                                      backgroundColor:
+                                          MaterialStateProperty.all(
+                                            Colors.grey[200],
+                                          ),
+                                      padding: MaterialStateProperty.all(
+                                        const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      '≣',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              elevation: 8,
+            );
+          },
+          color: Theme.of(context).colorScheme.primary,
+          tooltip: '页面样式设置',
         ),
       ),
     );
