@@ -37,6 +37,23 @@ dependencies:
   provider: ^6.1.2
   auto_route: ^10.3.0
 
+  # 音频录制和处理
+  record: ^6.1.2
+  audioplayers: ^6.1.0
+
+  # 权限管理
+  permission_handler: ^11.3.1
+
+  # HTTP请求
+  http: ^1.2.0
+  dio: ^5.4.0
+
+  # 状态管理
+  flutter_riverpod: ^2.4.9
+
+  path_provider: ^2.1.2
+  path: ^1.8.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -48,8 +65,9 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   auto_route_generator: ^10.3.1
+  build: ^4.0.0
   build_runner: ^2.10.4
-  
+  glob: ^2.1.2
   # 代码生成相关依赖
 
 # For information on the generic Dart part of this file, see the

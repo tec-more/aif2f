@@ -1,9 +1,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:aif2f/scene/model/scene_model.dart';
 import 'package:aif2f/scene/view/scene_menu.dart';
 import 'package:aif2f/user/view/user_menu.dart';
+import 'package:aif2f/interpret/viewmodel/interpret_view_model.dart';
 
 /// 传译场景页面
 @RoutePage(name: 'InterpretRoute')
@@ -18,6 +18,8 @@ class _InterpretViewState extends State<InterpretView> {
   final TextEditingController _sourceController = TextEditingController();
   final TextEditingController _targetController = TextEditingController();
   final GlobalKey _languageSelectorKey = GlobalKey();
+
+  late InterpretViewModel _viewModel;
 
   String _sourceLanguage = '英语';
   String _targetLanguage = '中文';
@@ -46,10 +48,29 @@ class _InterpretViewState extends State<InterpretView> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _viewModel = InterpretViewModel();
+    _viewModel.addListener(_onViewModelChanged);
+  }
+
+  @override
   void dispose() {
     _sourceController.dispose();
     _targetController.dispose();
+    _viewModel.removeListener(_onViewModelChanged);
+    _viewModel.dispose();
     super.dispose();
+  }
+
+  void _onViewModelChanged() {
+    setState(() {
+      // 更新UI状态
+      if (_viewModel.currentTranslation != null) {
+        _sourceController.text = _viewModel.currentTranslation!.sourceText;
+        _targetController.text = _viewModel.currentTranslation!.targetText;
+      }
+    });
   }
 
   @override
@@ -82,11 +103,77 @@ class _InterpretViewState extends State<InterpretView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 欢迎标题
-              Text(
-                '欢迎使用AI传译',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontSize: MediaQuery.of(context).size.width < 600 ? 20 : 24,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '欢迎使用AI传译',
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 20
+                                : 24,
+                          ),
+                    ),
+                  ),
+                  // 状态指示器
+                  if (_viewModel.isRecording || _viewModel.isProcessing)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _viewModel.isRecording
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _viewModel.isRecording
+                              ? Colors.red
+                              : Theme.of(context).colorScheme.primary,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_viewModel.isRecording)
+                            Container(
+                              width: 8,
+                              height: 8,
+                              margin: const EdgeInsets.only(right: 6),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                            )
+                          else
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            _viewModel.statusMessage,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _viewModel.isRecording
+                                  ? Colors.red
+                                  : Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
               SizedBox(height: MediaQuery.of(context).size.width < 600 ? 4 : 8),
               Text(
@@ -114,36 +201,7 @@ class _InterpretViewState extends State<InterpretView> {
                           children: [
                             _buildLanguageSelector(),
                             const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 44,
-                              child: ElevatedButton.icon(
-                                onPressed: _translate,
-                                icon: const Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: 20,
-                                ),
-                                label: const Text(
-                                  '开始翻译',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.primary,
-                                  foregroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 0,
-                                ),
-                              ),
-                            ),
+                            _buildRecordButton(),
                             const SizedBox(height: 12),
                             _buildLayoutPopupWindow(),
                           ],
@@ -154,36 +212,7 @@ class _InterpretViewState extends State<InterpretView> {
                           children: [
                             Expanded(child: _buildLanguageSelector()),
                             const SizedBox(width: 16),
-                            SizedBox(
-                              width: 120,
-                              height: 40,
-                              child: ElevatedButton.icon(
-                                onPressed: _translate,
-                                icon: const Icon(
-                                  Icons.play_arrow_rounded,
-                                  size: 18,
-                                ),
-                                label: const Text(
-                                  '开始',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.primary,
-                                  foregroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  elevation: 0,
-                                ),
-                              ),
-                            ),
+                            _buildRecordButton(),
                             const SizedBox(width: 16),
                             Expanded(child: _buildLayoutPopupWindow()),
                           ],
@@ -1030,6 +1059,9 @@ class _InterpretViewState extends State<InterpretView> {
                                 _sourceLanguage = tempSourceLanguage;
                                 _targetLanguage = tempTargetLanguage;
                               });
+                              // 更新ViewModel的语言设置
+                              _viewModel.setSourceLanguage(_sourceLanguage);
+                              _viewModel.setTargetLanguage(_targetLanguage);
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
@@ -1079,7 +1111,7 @@ class _InterpretViewState extends State<InterpretView> {
     });
   }
 
-  void _translate() {
+  void _translate() async {
     if (_sourceController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1098,23 +1130,50 @@ class _InterpretViewState extends State<InterpretView> {
       return;
     }
 
-    // 模拟翻译（实际使用时需要接入翻译API）
-    setState(() {
-      _targetController.text = '【模拟翻译】${_sourceController.text}';
-    });
+    // 使用ViewModel进行翻译
+    await _viewModel.translateText(_sourceController.text);
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12),
-            const Text('翻译完成'),
-          ],
+  /// 构建录音按钮
+  Widget _buildRecordButton() {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isRecording = _viewModel.isRecording;
+    final isProcessing = _viewModel.isProcessing;
+
+    return SizedBox(
+      width: isMobile ? double.infinity : 120,
+      height: isMobile ? 44 : 40,
+      child: ElevatedButton.icon(
+        onPressed: isProcessing
+            ? null
+            : () {
+                if (isRecording) {
+                  _viewModel.stopRecordingAndTranslate();
+                } else {
+                  _viewModel.startRecordingAndTranslate();
+                }
+              },
+        icon: Icon(
+          isRecording ? Icons.stop : Icons.mic,
+          size: isMobile ? 20 : 18,
         ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
+        label: Text(
+          isRecording ? '停止' : '录音',
+          style: TextStyle(
+            fontSize: isMobile ? 14 : 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isRecording
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(isMobile ? 12 : 8),
+          ),
+          elevation: 0,
+        ),
       ),
     );
   }
