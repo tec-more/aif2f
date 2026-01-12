@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
-import 'package:source_gen/source_gen.dart';
 
 /// 主路由生成器 - 用于生成所有路由的导入代码
 class MainRouteGenerator implements Builder {
