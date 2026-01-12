@@ -75,7 +75,9 @@ class _InterpretViewState extends State<InterpretView> {
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.all(MediaQuery.of(context).size.width < 600 ? 16 : 24),
+          padding: EdgeInsets.all(
+            MediaQuery.of(context).size.width < 600 ? 16 : 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -87,10 +89,15 @@ class _InterpretViewState extends State<InterpretView> {
                 ),
               ),
               SizedBox(height: MediaQuery.of(context).size.width < 600 ? 4 : 8),
-              Text('轻松实现多语言翻译', style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: MediaQuery.of(context).size.width < 600 ? 12 : 14,
-              )),
-              SizedBox(height: MediaQuery.of(context).size.width < 600 ? 16 : 24),
+              Text(
+                '轻松实现多语言翻译',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: MediaQuery.of(context).size.width < 600 ? 12 : 14,
+                ),
+              ),
+              SizedBox(
+                height: MediaQuery.of(context).size.width < 600 ? 16 : 24,
+              ),
               // 语言选择卡片
               Card(
                 elevation: 0,
@@ -98,76 +105,94 @@ class _InterpretViewState extends State<InterpretView> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Padding(
-                  padding: EdgeInsets.all(MediaQuery.of(context).size.width < 600 ? 8 : 12),
+                  padding: EdgeInsets.all(
+                    MediaQuery.of(context).size.width < 600 ? 8 : 12,
+                  ),
                   child: MediaQuery.of(context).size.width < 600
-                    // 移动端：垂直布局
-                    ? Column(
-                        children: [
-                          _buildLanguageSelector(),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 44,
-                            child: ElevatedButton.icon(
-                              onPressed: _translate,
-                              icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                              label: const Text(
-                                '开始翻译',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                      // 移动端：垂直布局
+                      ? Column(
+                          children: [
+                            _buildLanguageSelector(),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: _translate,
+                                icon: const Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 20,
                                 ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                label: const Text(
+                                  '开始翻译',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                                elevation: 0,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildLayoutPopupWindow(),
-                        ],
-                      )
-                    // 桌面端：水平布局
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Expanded(child: _buildLanguageSelector()),
-                          const SizedBox(width: 16),
-                          SizedBox(
-                            width: 120,
-                            height: 40,
-                            child: ElevatedButton.icon(
-                              onPressed: _translate,
-                              icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                              label: const Text(
-                                '开始',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
+                            const SizedBox(height: 12),
+                            _buildLayoutPopupWindow(),
+                          ],
+                        )
+                      // 桌面端：水平布局
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(child: _buildLanguageSelector()),
+                            const SizedBox(width: 16),
+                            SizedBox(
+                              width: 120,
+                              height: 40,
+                              child: ElevatedButton.icon(
+                                onPressed: _translate,
+                                icon: const Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 18,
                                 ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                label: const Text(
+                                  '开始',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                                elevation: 0,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  elevation: 0,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildLayoutPopupWindow()),
-                        ],
-                      ),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildLayoutPopupWindow()),
+                          ],
+                        ),
                 ),
               ),
-              SizedBox(height: MediaQuery.of(context).size.width < 600 ? 16 : 24),
+              SizedBox(
+                height: MediaQuery.of(context).size.width < 600 ? 16 : 24,
+              ),
               // 文本输入/输出卡片
               Card(
                 elevation: 0,
@@ -175,57 +200,42 @@ class _InterpretViewState extends State<InterpretView> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: SizedBox(
-                  height: MediaQuery.of(context).size.height * (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.5),
+                  height:
+                      MediaQuery.of(context).size.height *
+                      (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.5),
                   child: Column(
                     children: [
                       // 源语言输入区
                       Expanded(
                         child: Padding(
-                          padding: EdgeInsets.all(MediaQuery.of(context).size.width < 600 ? 16 : 24),
+                          padding: EdgeInsets.all(
+                            MediaQuery.of(context).size.width < 600 ? 12 : 24,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(MediaQuery.of(context).size.width < 600 ? 8 : 10),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primaryContainer,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      Icons.mic,
-                                      color: Theme.of(context).colorScheme.primary,
-                                      size: MediaQuery.of(context).size.width < 600 ? 16 : 20,
-                                    ),
-                                  ),
-                                  SizedBox(width: MediaQuery.of(context).size.width < 600 ? 6 : 8),
-                                  Text(
-                                    _sourceLanguage,
-                                    style: TextStyle(
-                                      fontSize: MediaQuery.of(context).size.width < 600 ? 13 : 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: MediaQuery.of(context).size.width < 600 ? 12 : 16),
                               Expanded(
                                 child: TextField(
                                   controller: _sourceController,
                                   maxLines: null,
                                   textAlignVertical: TextAlignVertical.top,
                                   decoration: InputDecoration(
-                                    hintText: '请输入要翻译的文本...',
+                                    hintText: '源语言',
                                     border: InputBorder.none,
                                     contentPadding: EdgeInsets.zero,
                                     hintStyle: TextStyle(
-                                      fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
+                                      fontSize:
+                                          MediaQuery.of(context).size.width <
+                                              600
+                                          ? 14
+                                          : 16,
                                     ),
                                   ),
                                   style: TextStyle(
-                                    fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
+                                    fontSize:
+                                        MediaQuery.of(context).size.width < 600
+                                        ? 12
+                                        : 16,
                                     color: Colors.black87,
                                     height: 1.5,
                                   ),
@@ -239,74 +249,23 @@ class _InterpretViewState extends State<InterpretView> {
                       Divider(
                         height: 1,
                         thickness: 1,
-                        indent: MediaQuery.of(context).size.width < 600 ? 16 : 24,
-                        endIndent: MediaQuery.of(context).size.width < 600 ? 16 : 24,
+                        indent: MediaQuery.of(context).size.width < 600
+                            ? 12
+                            : 24,
+                        endIndent: MediaQuery.of(context).size.width < 600
+                            ? 12
+                            : 24,
                         color: Theme.of(context).colorScheme.outlineVariant,
                       ),
                       // 目标语言输出区
                       Expanded(
                         child: Padding(
-                          padding: EdgeInsets.all(MediaQuery.of(context).size.width < 600 ? 16 : 24),
+                          padding: EdgeInsets.all(
+                            MediaQuery.of(context).size.width < 600 ? 12 : 24,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(MediaQuery.of(context).size.width < 600 ? 8 : 10),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primaryContainer,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      Icons.translate,
-                                      color: Theme.of(context).colorScheme.primary,
-                                      size: MediaQuery.of(context).size.width < 600 ? 16 : 20,
-                                    ),
-                                  ),
-                                  SizedBox(width: MediaQuery.of(context).size.width < 600 ? 6 : 12),
-                                  Text(
-                                    _targetLanguage,
-                                    style: TextStyle(
-                                      fontSize: MediaQuery.of(context).size.width < 600 ? 13 : 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  GestureDetector(
-                                    onTap: () {
-                                      if (_targetController.text.isNotEmpty) {
-                                        Clipboard.setData(
-                                          ClipboardData(
-                                            text: _targetController.text,
-                                          ),
-                                        );
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Text('已复制到剪贴板'),
-                                            duration: const Duration(seconds: 2),
-                                            backgroundColor: Theme.of(context).colorScheme.primary,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: EdgeInsets.all(MediaQuery.of(context).size.width < 600 ? 8 : 10),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        Icons.copy,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                        size: MediaQuery.of(context).size.width < 600 ? 18 : 20,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: MediaQuery.of(context).size.width < 600 ? 12 : 16),
                               Expanded(
                                 child: TextField(
                                   controller: _targetController,
@@ -314,15 +273,22 @@ class _InterpretViewState extends State<InterpretView> {
                                   textAlignVertical: TextAlignVertical.top,
                                   readOnly: true,
                                   decoration: InputDecoration(
-                                    hintText: '翻译结果将显示在这里...',
+                                    hintText: '目标语言',
                                     border: InputBorder.none,
                                     contentPadding: EdgeInsets.zero,
                                     hintStyle: TextStyle(
-                                      fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
+                                      fontSize:
+                                          MediaQuery.of(context).size.width <
+                                              600
+                                          ? 14
+                                          : 16,
                                     ),
                                   ),
                                   style: TextStyle(
-                                    fontSize: MediaQuery.of(context).size.width < 600 ? 14 : 16,
+                                    fontSize:
+                                        MediaQuery.of(context).size.width < 600
+                                        ? 12
+                                        : 16,
                                     color: Colors.black87,
                                     height: 1.5,
                                   ),
@@ -354,16 +320,22 @@ class _InterpretViewState extends State<InterpretView> {
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
             padding: EdgeInsets.symmetric(
-              horizontal: MediaQuery.of(buttonContext).size.width < 600 ? 12 : 20,
-              vertical: MediaQuery.of(buttonContext).size.width < 600 ? 12 : 16,
+              horizontal: MediaQuery.of(buttonContext).size.width < 600
+                  ? 12
+                  : 12,
+              vertical: MediaQuery.of(buttonContext).size.width < 600 ? 12 : 12,
             ),
             decoration: BoxDecoration(
               border: Border.all(
-                color: Theme.of(buttonContext).colorScheme.primary.withOpacity(0.2),
+                color: Theme.of(
+                  buttonContext,
+                ).colorScheme.primary.withOpacity(0.2),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.circular(12),
-              color: Theme.of(buttonContext).colorScheme.primaryContainer.withOpacity(0.3),
+              color: Theme.of(
+                buttonContext,
+              ).colorScheme.primaryContainer.withOpacity(0.3),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -381,7 +353,7 @@ class _InterpretViewState extends State<InterpretView> {
                     child: Text(
                       _languageCodes[_sourceLanguage] ?? _sourceLanguage,
                       style: TextStyle(
-                        fontSize: MediaQuery.of(buttonContext).size.width < 600 ? 13 : 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(buttonContext).colorScheme.primary,
                       ),
@@ -391,11 +363,11 @@ class _InterpretViewState extends State<InterpretView> {
 
                 // 翻译方向箭头
                 Container(
-                  padding: EdgeInsets.all(MediaQuery.of(buttonContext).size.width < 600 ? 4 : 8),
+                  padding: EdgeInsets.all(12),
                   child: Icon(
                     Icons.compare_arrows_rounded,
                     color: Theme.of(buttonContext).colorScheme.primary,
-                    size: MediaQuery.of(buttonContext).size.width < 600 ? 16 : 20,
+                    size: 12,
                   ),
                 ),
 
@@ -405,7 +377,7 @@ class _InterpretViewState extends State<InterpretView> {
                     child: Text(
                       _languageCodes[_targetLanguage] ?? _targetLanguage,
                       style: TextStyle(
-                        fontSize: MediaQuery.of(buttonContext).size.width < 600 ? 13 : 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(buttonContext).colorScheme.primary,
                       ),
@@ -654,7 +626,7 @@ class _InterpretViewState extends State<InterpretView> {
             );
           },
           color: Theme.of(context).colorScheme.primary,
-          tooltip: '页面样式设置',
+          tooltip: '设置',
         ),
       ),
     );
