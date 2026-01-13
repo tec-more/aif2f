@@ -17,6 +17,7 @@ class InterpretView extends StatefulWidget {
 class _InterpretViewState extends State<InterpretView> {
   final TextEditingController _sourceController = TextEditingController();
   final TextEditingController _targetController = TextEditingController();
+
   final GlobalKey _languageSelectorKey = GlobalKey();
 
   late InterpretViewModel _viewModel;
@@ -51,6 +52,10 @@ class _InterpretViewState extends State<InterpretView> {
   void initState() {
     super.initState();
     _viewModel = InterpretViewModel();
+
+    // 初始化翻译服务
+    _viewModel.initialize();
+
     _viewModel.addListener(_onViewModelChanged);
   }
 
@@ -65,11 +70,9 @@ class _InterpretViewState extends State<InterpretView> {
 
   void _onViewModelChanged() {
     setState(() {
-      // 更新UI状态
-      if (_viewModel.currentTranslation != null) {
-        _sourceController.text = _viewModel.currentTranslation!.sourceText;
-        _targetController.text = _viewModel.currentTranslation!.targetText;
-      }
+      // 更新识别文本和翻译文本
+      _sourceController.text = _viewModel.recognizedText;
+      _targetController.text = _viewModel.translatedText;
     });
   }
 
@@ -117,56 +120,39 @@ class _InterpretViewState extends State<InterpretView> {
                     ),
                   ),
                   // 状态指示器
-                  if (_viewModel.isRecording || _viewModel.isProcessing)
+                  if (_viewModel.isProcessing)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: _viewModel.isRecording
-                            ? Colors.red.withValues(alpha: 0.1)
-                            : Theme.of(context).colorScheme.primaryContainer,
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: _viewModel.isRecording
-                              ? Colors.red
-                              : Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                           width: 1,
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (_viewModel.isRecording)
-                            Container(
-                              width: 8,
-                              height: 8,
-                              margin: const EdgeInsets.only(right: 6),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                            )
-                          else
-                            Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
+                          ),
                           Text(
                             _viewModel.statusMessage,
                             style: TextStyle(
                               fontSize: 12,
-                              color: _viewModel.isRecording
-                                  ? Colors.red
-                                  : Theme.of(context).colorScheme.primary,
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1054,14 +1040,15 @@ class _InterpretViewState extends State<InterpretView> {
                           width: double.infinity,
                           height: 44,
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
+                              // 更新ViewModel的语言设置（先更新ViewModel）
+                              await _viewModel.setSourceLanguage(tempSourceLanguage);
+                              await _viewModel.setTargetLanguage(tempTargetLanguage);
+
                               outerSetState(() {
                                 _sourceLanguage = tempSourceLanguage;
                                 _targetLanguage = tempTargetLanguage;
                               });
-                              // 更新ViewModel的语言设置
-                              _viewModel.setSourceLanguage(_sourceLanguage);
-                              _viewModel.setTargetLanguage(_targetLanguage);
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
@@ -1109,29 +1096,9 @@ class _InterpretViewState extends State<InterpretView> {
       _sourceController.text = _targetController.text;
       _targetController.text = tempText;
     });
-  }
 
-  void _translate() async {
-    if (_sourceController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              const Text('请输入要翻译的文本'),
-            ],
-          ),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // 使用ViewModel进行翻译
-    await _viewModel.translateText(_sourceController.text);
+    // 更新 ViewModel 的语言设置
+    _viewModel.swapLanguages();
   }
 
   /// 构建录音按钮
@@ -1140,39 +1107,77 @@ class _InterpretViewState extends State<InterpretView> {
     final isRecording = _viewModel.isRecording;
     final isProcessing = _viewModel.isProcessing;
 
-    return SizedBox(
-      width: isMobile ? double.infinity : 120,
-      height: isMobile ? 44 : 40,
-      child: ElevatedButton.icon(
-        onPressed: isProcessing
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: isProcessing
             ? null
             : () {
                 if (isRecording) {
-                  _viewModel.stopRecordingAndTranslate();
+                  _viewModel.stopRecording();
                 } else {
-                  _viewModel.startRecordingAndTranslate();
+                  _viewModel.startRecording();
                 }
               },
-        icon: Icon(
-          isRecording ? Icons.stop : Icons.mic,
-          size: isMobile ? 20 : 18,
-        ),
-        label: Text(
-          isRecording ? '停止' : '录音',
-          style: TextStyle(
-            fontSize: isMobile ? 14 : 13,
-            fontWeight: FontWeight.bold,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: isMobile ? double.infinity : 140,
+          height: isMobile ? 48 : 44,
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 20 : 16,
+            vertical: 12,
           ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isRecording
-              ? Theme.of(context).colorScheme.error
-              : Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(
+          decoration: BoxDecoration(
+            gradient: isRecording
+                ? LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.error,
+                      Theme.of(context).colorScheme.error.withOpacity(0.8),
+                    ],
+                  )
+                : LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    ],
+                  ),
             borderRadius: BorderRadius.circular(isMobile ? 12 : 8),
+            boxShadow: [
+              BoxShadow(
+                color: isRecording
+                    ? Theme.of(context).colorScheme.error.withOpacity(0.3)
+                    : Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          elevation: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isRecording)
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                )
+              else
+                const Icon(Icons.mic_rounded, color: Colors.white, size: 20),
+              if (isMobile) const SizedBox(width: 8),
+              if (isMobile)
+                Text(
+                  isRecording ? '停止录音' : '开始录音',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

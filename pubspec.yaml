@@ -37,16 +37,19 @@ dependencies:
   provider: ^6.1.2
   auto_route: ^10.3.0
 
+  record: ^5.1.0          # 全平台录音与音频流输出
+  web_socket_channel: ^3.0.1  # 与智谱进行 WebSocket 通讯
+  permission_handler: ^11.3.1 # 处理移动端权限
   # 音频录制和处理
-  record: ^6.1.2
+  flutter_sound: ^9.0.0
   audioplayers: ^6.1.0
-
-  # 权限管理
-  permission_handler: ^11.3.1
 
   # HTTP请求
   http: ^1.2.0
   dio: ^5.4.0
+
+  # 加密和认证
+  crypto: ^3.0.3
 
   # 状态管理
   flutter_riverpod: ^2.4.9
