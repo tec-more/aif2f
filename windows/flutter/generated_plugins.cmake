@@ -3,10 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  audioplayers_windows
-  flutter_sound
-  permission_handler_windows
-  record_windows
+  flutter_f2f_sound
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

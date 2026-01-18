@@ -3,9 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  audioplayers_linux
-  flutter_sound
-  record_linux
+  flutter_f2f_sound
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

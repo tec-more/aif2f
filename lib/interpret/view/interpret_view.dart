@@ -70,8 +70,7 @@ class _InterpretViewState extends State<InterpretView> {
 
   void _onViewModelChanged() {
     setState(() {
-      // 更新识别文本和翻译文本
-      _sourceController.text = _viewModel.recognizedText;
+      // 更新输入文本和翻译文本
       _targetController.text = _viewModel.translatedText;
     });
   }
@@ -187,6 +186,8 @@ class _InterpretViewState extends State<InterpretView> {
                           children: [
                             _buildLanguageSelector(),
                             const SizedBox(height: 12),
+                            _buildTranslateButton(),
+                            const SizedBox(height: 12),
                             _buildRecordButton(),
                             const SizedBox(height: 12),
                             _buildLayoutPopupWindow(),
@@ -197,6 +198,8 @@ class _InterpretViewState extends State<InterpretView> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Expanded(child: _buildLanguageSelector()),
+                            const SizedBox(width: 16),
+                            _buildTranslateButton(),
                             const SizedBox(width: 16),
                             _buildRecordButton(),
                             const SizedBox(width: 16),
@@ -1041,9 +1044,11 @@ class _InterpretViewState extends State<InterpretView> {
                           height: 44,
                           child: ElevatedButton(
                             onPressed: () async {
-                              // 更新ViewModel的语言设置（先更新ViewModel）
-                              await _viewModel.setSourceLanguage(tempSourceLanguage);
-                              await _viewModel.setTargetLanguage(tempTargetLanguage);
+                              // ✅ 使用新方法一次性设置两种语言，避免发送两次WebSocket消息
+                              await _viewModel.setLanguages(
+                                tempSourceLanguage,
+                                tempTargetLanguage,
+                              );
 
                               outerSetState(() {
                                 _sourceLanguage = tempSourceLanguage;
@@ -1101,10 +1106,9 @@ class _InterpretViewState extends State<InterpretView> {
     _viewModel.swapLanguages();
   }
 
-  /// 构建录音按钮
-  Widget _buildRecordButton() {
+  /// 构建翻译按钮
+  Widget _buildTranslateButton() {
     final isMobile = MediaQuery.of(context).size.width < 600;
-    final isRecording = _viewModel.isRecording;
     final isProcessing = _viewModel.isProcessing;
 
     return MouseRegion(
@@ -1113,10 +1117,9 @@ class _InterpretViewState extends State<InterpretView> {
         onTap: isProcessing
             ? null
             : () {
-                if (isRecording) {
-                  _viewModel.stopRecording();
-                } else {
-                  _viewModel.startRecording();
+                final text = _sourceController.text.trim();
+                if (text.isNotEmpty) {
+                  _viewModel.translateText(text);
                 }
               },
         child: AnimatedContainer(
@@ -1128,25 +1131,89 @@ class _InterpretViewState extends State<InterpretView> {
             vertical: 12,
           ),
           decoration: BoxDecoration(
-            gradient: isRecording
-                ? LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.error,
-                      Theme.of(context).colorScheme.error.withOpacity(0.8),
-                    ],
-                  )
-                : LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                    ],
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.primary.withOpacity(0.8),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(isMobile ? 12 : 8),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isProcessing)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
+                )
+              else
+                const Icon(Icons.translate_rounded, color: Colors.white, size: 20),
+              if (isMobile) const SizedBox(width: 8),
+              if (isMobile)
+                Text(
+                  isProcessing ? '翻译中...' : '翻译',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建录音按钮
+  Widget _buildRecordButton() {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isRecording = _viewModel.isProcessing;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          _viewModel.toggleRecording();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: isMobile ? double.infinity : 140,
+          height: isMobile ? 48 : 44,
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 20 : 16,
+            vertical: 12,
+          ),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isRecording
+                  ? [
+                      Colors.red.withOpacity(0.8),
+                      Colors.red.withOpacity(0.6),
+                    ]
+                  : [
+                      Theme.of(context).colorScheme.secondary,
+                      Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+                    ],
+            ),
             borderRadius: BorderRadius.circular(isMobile ? 12 : 8),
             boxShadow: [
               BoxShadow(
                 color: isRecording
-                    ? Theme.of(context).colorScheme.error.withOpacity(0.3)
-                    : Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                    ? Colors.red.withOpacity(0.3)
+                    : Theme.of(context).colorScheme.secondary.withOpacity(0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -1156,20 +1223,24 @@ class _InterpretViewState extends State<InterpretView> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (isRecording)
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(2),
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
               else
-                const Icon(Icons.mic_rounded, color: Colors.white, size: 20),
+                Icon(
+                  Icons.mic_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               if (isMobile) const SizedBox(width: 8),
               if (isMobile)
                 Text(
-                  isRecording ? '停止录音' : '开始录音',
+                  isRecording ? '录音中...' : '录音',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,

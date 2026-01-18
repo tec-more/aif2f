@@ -37,12 +37,12 @@ dependencies:
   provider: ^6.1.2
   auto_route: ^10.3.0
 
-  record: ^5.1.0          # 全平台录音与音频流输出
   web_socket_channel: ^3.0.1  # 与智谱进行 WebSocket 通讯
-  permission_handler: ^11.3.1 # 处理移动端权限
-  # 音频录制和处理
-  flutter_sound: ^9.0.0
-  audioplayers: ^6.1.0
+
+  # 音频处理 - 注意：flutter_sound 不支持 Windows
+  # Windows 构建时已注释 flutter_sound
+  # flutter_sound: ^9.30.0
+  flutter_f2f_sound: ^1.0.1
 
   # HTTP请求
   http: ^1.2.0
@@ -52,10 +52,11 @@ dependencies:
   crypto: ^3.0.3
 
   # 状态管理
-  flutter_riverpod: ^2.4.9
+  flutter_riverpod: ^3.1.0
 
-  path_provider: ^2.1.2
+  # path_provider: ^2.1.2  # Windows 构建时已注释
   path: ^1.8.3
+  # permission_handler: ^12.0.1  # Windows 构建时已注释
 
 dev_dependencies:
   flutter_test:
@@ -71,12 +72,7 @@ dev_dependencies:
   build: ^4.0.0
   build_runner: ^2.10.4
   glob: ^2.1.2
-  # 代码生成相关依赖
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
 flutter:
 
   # The following line ensures that the Material Icons font is
