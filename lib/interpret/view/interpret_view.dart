@@ -551,7 +551,7 @@ class _InterpretViewState extends State<InterpretView> {
                                     onPressed: () {
                                       // 双面板
                                     },
-                                    icon: const _TwoPanelsIcon(),
+                                    icon: const TwoPanelsIcon(),
                                     style: IconButton.styleFrom(
                                       backgroundColor: Colors.grey[200],
                                     ),
@@ -586,7 +586,7 @@ class _InterpretViewState extends State<InterpretView> {
                                     onPressed: () {
                                       // 文本布局1 - 单行文本
                                     },
-                                    icon: const _TextLayout1Icon(),
+                                    icon: const TextLayout1Icon(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 4,
@@ -599,7 +599,7 @@ class _InterpretViewState extends State<InterpretView> {
                                     onPressed: () {
                                       // 文本布局2 - 两行文本
                                     },
-                                    icon: const _TextLayout2Icon(),
+                                    icon: const TextLayout2Icon(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 4,
@@ -612,7 +612,7 @@ class _InterpretViewState extends State<InterpretView> {
                                     onPressed: () {
                                       // 文本布局3 - 三行文本
                                     },
-                                    icon: const _TextLayout3Icon(),
+                                    icon: const TextLayout3Icon(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 4,
@@ -625,7 +625,7 @@ class _InterpretViewState extends State<InterpretView> {
                                     onPressed: () {
                                       // 文本布局4 - 列表视图
                                     },
-                                    icon: const _TextLayout4Icon(),
+                                    icon: const TextLayout4Icon(),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 4,

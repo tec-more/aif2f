@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 // 自定义双面板图标 - 两个左右排列的空心矩形框
-class _TwoPanelsIcon extends StatelessWidget {
-  const _TwoPanelsIcon();
+class TwoPanelsIcon extends StatelessWidget {
+  const TwoPanelsIcon();
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(size: const Size(24, 24), painter: _TwoPanelsPainter());
+    return CustomPaint(size: const Size(24, 24), painter: TwoPanelsPainter());
   }
 }
 
-class _TwoPanelsPainter extends CustomPainter {
+class TwoPanelsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -49,19 +49,16 @@ class _TwoPanelsPainter extends CustomPainter {
 
 // 文本布局1 - 分为上下两部分，上面部分左边是一个实心矩形，右边在分为上下2行，上面是一个长横线，下面是一个短横线；
 // 下面部分同上面部分
-class _TextLayout1Icon extends StatelessWidget {
-  const _TextLayout1Icon();
+class TextLayout1Icon extends StatelessWidget {
+  const TextLayout1Icon();
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _TextLayout1Painter(),
-    );
+    return CustomPaint(size: const Size(24, 24), painter: TextLayout1Painter());
   }
 }
 
-class _TextLayout1Painter extends CustomPainter {
+class TextLayout1Painter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
@@ -136,19 +133,16 @@ class _TextLayout1Painter extends CustomPainter {
 
 // 文本布局2 - 分为上下两部分，上面部分左边是一个实心三角形，箭头向右，右边在分为上下2行，上面是一个长横线，下面是一个短横线；
 // 下面部分同上面部分
-class _TextLayout2Icon extends StatelessWidget {
-  const _TextLayout2Icon();
+class TextLayout2Icon extends StatelessWidget {
+  const TextLayout2Icon();
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _TextLayout2Painter(),
-    );
+    return CustomPaint(size: const Size(24, 24), painter: TextLayout2Painter());
   }
 }
 
-class _TextLayout2Painter extends CustomPainter {
+class TextLayout2Painter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
@@ -222,19 +216,16 @@ class _TextLayout2Painter extends CustomPainter {
 
 // 文本布局3 - 分为上下两部分，上面部分左边是一个实心矩形，右边在分为上下2行，上面是一个长横线，下面是一个短横线；
 // 下面部分左边是一个实心三角形，箭头向右，右边在分为上下2行，上面是一个长横线，下面是一个短横线；
-class _TextLayout3Icon extends StatelessWidget {
-  const _TextLayout3Icon();
+class TextLayout3Icon extends StatelessWidget {
+  const TextLayout3Icon();
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _TextLayout3Painter(),
-    );
+    return CustomPaint(size: const Size(24, 24), painter: TextLayout3Painter());
   }
 }
 
-class _TextLayout3Painter extends CustomPainter {
+class TextLayout3Painter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
@@ -309,19 +300,16 @@ class _TextLayout3Painter extends CustomPainter {
 
 // 文本布局4 - 分为上下两部分，上面部分分为2行，上面一行是向上的一个实心箭头，接连一条竖线，竖线连接一条横线，横线处于上面部分的最底端，箭头底部中央和竖线相连，竖线和上半部分横线相连；
 // 下面部分分为上下2行，上面一行是一条横线，横线处于下面部分的最顶端，该横线连接一条竖线，竖线连接一个向下的实心箭头；
-class _TextLayout4Icon extends StatelessWidget {
-  const _TextLayout4Icon();
+class TextLayout4Icon extends StatelessWidget {
+  const TextLayout4Icon();
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _TextLayout4Painter(),
-    );
+    return CustomPaint(size: const Size(24, 24), painter: TextLayout4Painter());
   }
 }
 
-class _TextLayout4Painter extends CustomPainter {
+class TextLayout4Painter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final strokePaint = Paint()
