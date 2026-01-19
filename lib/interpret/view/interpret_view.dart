@@ -197,7 +197,7 @@ class _InterpretViewState extends State<InterpretView> {
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Expanded(child: _buildLanguageSelector()),
+                            _buildLanguageSelector(),
                             const SizedBox(width: 16),
                             _buildTranslateButton(),
                             const SizedBox(width: 16),
@@ -328,81 +328,83 @@ class _InterpretViewState extends State<InterpretView> {
   }
 
   Widget _buildLanguageSelector() {
-    return MouseRegion(
-      key: _languageSelectorKey,
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => _showLanguageSelector(),
-        child: Builder(
-          builder: (buttonContext) => AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            padding: EdgeInsets.symmetric(
-              horizontal: MediaQuery.of(buttonContext).size.width < 600
-                  ? 12
-                  : 12,
-              vertical: MediaQuery.of(buttonContext).size.width < 600 ? 12 : 12,
-            ),
-            decoration: BoxDecoration(
-              border: Border.all(
+    return SizedBox(
+      width: 120,
+      child: MouseRegion(
+        key: _languageSelectorKey,
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => _showLanguageSelector(),
+          child: Builder(
+            builder: (buttonContext) => AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Theme.of(
+                    buttonContext,
+                  ).colorScheme.primary.withOpacity(0.2),
+                  width: 1.0,
+                ),
+                borderRadius: BorderRadius.circular(12),
                 color: Theme.of(
                   buttonContext,
-                ).colorScheme.primary.withOpacity(0.2),
-                width: 1.0,
+                ).colorScheme.primaryContainer.withOpacity(0.3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(12),
-              color: Theme.of(
-                buttonContext,
-              ).colorScheme.primaryContainer.withOpacity(0.3),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // 源语言
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      _languageCodes[_sourceLanguage] ?? _sourceLanguage,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(buttonContext).colorScheme.primary,
+              // 确保AnimatedContainer也受到宽度限制
+              constraints: BoxConstraints(maxWidth: 100),
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // 源语言 - 移除Expanded，使用固定宽度
+                  SizedBox(
+                    width: 30,
+                    child: Center(
+                      child: Text(
+                        _languageCodes[_sourceLanguage] ?? _sourceLanguage,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(buttonContext).colorScheme.primary,
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                // 翻译方向箭头
-                Container(
-                  padding: EdgeInsets.all(12),
-                  child: Icon(
-                    Icons.compare_arrows_rounded,
-                    color: Theme.of(buttonContext).colorScheme.primary,
-                    size: 12,
+                  // 翻译方向箭头 - 减小内边距
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    child: Icon(
+                      Icons.compare_arrows_rounded,
+                      color: Theme.of(buttonContext).colorScheme.primary,
+                      size: 14,
+                    ),
                   ),
-                ),
 
-                // 目标语言
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      _languageCodes[_targetLanguage] ?? _targetLanguage,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(buttonContext).colorScheme.primary,
+                  // 目标语言 - 移除Expanded，使用固定宽度
+                  SizedBox(
+                    width: 30,
+                    child: Center(
+                      child: Text(
+                        _languageCodes[_targetLanguage] ?? _targetLanguage,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(buttonContext).colorScheme.primary,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -770,7 +772,7 @@ class _InterpretViewState extends State<InterpretView> {
                                           color: Theme.of(
                                             context,
                                           ).colorScheme.primary,
-                                          size: 12,
+                                          size: 14,
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
@@ -1159,7 +1161,11 @@ class _InterpretViewState extends State<InterpretView> {
                   ),
                 )
               else
-                const Icon(Icons.translate_rounded, color: Colors.white, size: 20),
+                const Icon(
+                  Icons.translate_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               if (isMobile) const SizedBox(width: 8),
               if (isMobile)
                 Text(
@@ -1199,10 +1205,7 @@ class _InterpretViewState extends State<InterpretView> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: isRecording
-                  ? [
-                      Colors.red.withOpacity(0.8),
-                      Colors.red.withOpacity(0.6),
-                    ]
+                  ? [Colors.red.withOpacity(0.8), Colors.red.withOpacity(0.6)]
                   : [
                       Theme.of(context).colorScheme.secondary,
                       Theme.of(context).colorScheme.secondary.withOpacity(0.8),
@@ -1232,11 +1235,7 @@ class _InterpretViewState extends State<InterpretView> {
                   ),
                 )
               else
-                Icon(
-                  Icons.mic_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                Icon(Icons.mic_rounded, color: Colors.white, size: 20),
               if (isMobile) const SizedBox(width: 8),
               if (isMobile)
                 Text(
