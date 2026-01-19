@@ -26,11 +26,7 @@ class PresentationScenePage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.present_to_all,
-              size: 80,
-              color: Colors.blue,
-            ),
+            Icon(Icons.present_to_all, size: 80, color: Colors.blue),
             SizedBox(height: 20),
             Text(
               '演讲场景',

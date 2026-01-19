@@ -26,11 +26,7 @@ class MeetingScenePage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.meeting_room,
-              size: 80,
-              color: Colors.green,
-            ),
+            Icon(Icons.meeting_room, size: 80, color: Colors.green),
             SizedBox(height: 20),
             Text(
               '会议场景',

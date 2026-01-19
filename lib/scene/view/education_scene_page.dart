@@ -26,11 +26,7 @@ class EducationScenePage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.school,
-              size: 80,
-              color: Colors.orange,
-            ),
+            Icon(Icons.school, size: 80, color: Colors.orange),
             SizedBox(height: 20),
             Text(
               '教育场景',

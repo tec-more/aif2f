@@ -17,7 +17,5 @@ export 'form/two_column_text_left_right.dart';
 export 'form/two_column_text_up_down.dart';
 
 // 菜单组件
-export 'menu/scene_menu.dart';
-export 'menu/user_menu.dart';
 
 // 后续添加更多组件的导出

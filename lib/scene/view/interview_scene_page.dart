@@ -26,11 +26,7 @@ class InterviewScenePage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.badge,
-              size: 80,
-              color: Colors.purple,
-            ),
+            Icon(Icons.badge, size: 80, color: Colors.purple),
             SizedBox(height: 20),
             Text(
               '面试场景',
