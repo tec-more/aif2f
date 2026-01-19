@@ -8,14 +8,17 @@
 
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import 'package:logging/logging.dart';
+
+final _logger = Logger('RouteGenerator');
 
 void main() {
-  print('🔍 正在扫描路由页面...\n');
+  _logger.info('🔍 正在扫描路由页面...\n');
 
   // 查找所有带有 @RoutePage 注解的页面
   final libDir = Directory('lib');
   if (!libDir.existsSync()) {
-    print('❌ 错误: 找不到 lib 目录');
+    _logger.info('❌ 错误: 找不到 lib 目录');
     exit(1);
   }
 
@@ -41,7 +44,7 @@ void main() {
     }
 
     if (targetDir == null) {
-      print('⚠️  跳过不存在的模块: $module');
+      _logger.info('⚠️  跳过不存在的模块: $module');
       continue;
     }
 
@@ -83,13 +86,13 @@ void main() {
             ),
           );
 
-          print('✅ 找到路由页面: $className -> $routeName');
+          _logger.info('✅ 找到路由页面: $className -> $routeName');
         }
       }
     }
   }
 
-  print('\n📝 共找到 ${routePages.length} 个路由页面\n');
+  _logger.info('\n📝 共找到 ${routePages.length} 个路由页面\n');
 
   // 生成 AppRoutes 类
   final output = _generateAppRoutesClass(routePages);
@@ -97,27 +100,29 @@ void main() {
   // 写入 app_router.dart 文件
   final appRouterFile = File('lib/core/router/app_router.dart');
   if (!appRouterFile.existsSync()) {
-    print('❌ 错误: 找不到 app_router.dart 文件');
+    _logger.info('❌ 错误: 找不到 app_router.dart 文件');
     exit(1);
   }
 
   // 备份原文件
   final backupFile = File('lib/core/router/app_router.dart.bak');
   appRouterFile.copySync(backupFile.path);
-  print('💾 已备份原文件到 app_router.dart.bak');
+  _logger.info('💾 已备份原文件到 app_router.dart.bak');
 
   // 写入新内容
   appRouterFile.writeAsStringSync(output);
-  print('✅ 已更新 app_router.dart 文件');
+  _logger.info('✅ 已更新 app_router.dart 文件');
 
   // 运行代码格式化
-  print('\n🎨 正在格式化代码...');
+  _logger.info('\n🎨 正在格式化代码...');
   Process.runSync('dart', ['format', 'lib/core/router/app_router.dart']);
-  print('✅ 代码格式化完成\n');
+  _logger.info('✅ 代码格式化完成\n');
 
-  print('🎉 路由常量生成完成！');
-  print('💡 提示: 运行以下命令重新生成路由代码:');
-  print('   flutter pub run build_runner build --delete-conflicting-outputs');
+  _logger.info('🎉 路由常量生成完成！');
+  _logger.info('💡 提示: 运行以下命令重新生成路由代码:');
+  _logger.info(
+    '   flutter pub run build_runner build --delete-conflicting-outputs',
+  );
 }
 
 /// 生成 AppRoutes 类代码
