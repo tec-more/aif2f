@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/components/icon/icon_text.dart';
 import 'package:aif2f/scene/view/scene_menu.dart';
 import 'package:aif2f/user/view/user_menu.dart';
@@ -8,25 +9,11 @@ import 'package:aif2f/interpret/viewmodel/interpret_view_model.dart';
 
 /// 传译场景页面
 @RoutePage(name: 'InterpretRoute')
-class InterpretView extends StatefulWidget {
+class InterpretView extends ConsumerWidget {
   const InterpretView({super.key});
 
-  @override
-  State<InterpretView> createState() => _InterpretViewState();
-}
-
-class _InterpretViewState extends State<InterpretView> {
-  final TextEditingController _sourceController = TextEditingController();
-  final TextEditingController _targetController = TextEditingController();
-
-  final GlobalKey _languageSelectorKey = GlobalKey();
-
-  late InterpretViewModel _viewModel;
-
-  String _sourceLanguage = '英语';
-  String _targetLanguage = '中文';
-
-  final List<String> _languages = [
+  // 语言列表
+  static const List<String> _languages = [
     '英语',
     '中文',
     '日语',
@@ -38,7 +25,7 @@ class _InterpretViewState extends State<InterpretView> {
   ];
 
   // 语言简称映射
-  final Map<String, String> _languageCodes = {
+  static const Map<String, String> _languageCodes = {
     '英语': 'EN',
     '中文': 'ZH',
     '日语': 'JA',
@@ -49,35 +36,20 @@ class _InterpretViewState extends State<InterpretView> {
     '俄语': 'RU',
   };
 
-  @override
-  void initState() {
-    super.initState();
-    _viewModel = InterpretViewModel();
-
-    // 初始化翻译服务
-    _viewModel.initialize();
-
-    _viewModel.addListener(_onViewModelChanged);
-  }
+  // 语言选择器的全局键
+  static final GlobalKey _languageSelectorKey = GlobalKey();
 
   @override
-  void dispose() {
-    _sourceController.dispose();
-    _targetController.dispose();
-    _viewModel.removeListener(_onViewModelChanged);
-    _viewModel.dispose();
-    super.dispose();
-  }
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 监听传译状态
+    final state = ref.watch(interpretViewModelProvider);
 
-  void _onViewModelChanged() {
-    setState(() {
-      // 更新输入文本和翻译文本
-      _targetController.text = _viewModel.translatedText;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+    // 初始化翻译服务 - 仅当未连接时初始化
+    if (!state.isConnected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(interpretViewModelProvider.notifier).initialize();
+      });
+    }
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -120,7 +92,7 @@ class _InterpretViewState extends State<InterpretView> {
                     ),
                   ),
                   // 状态指示器
-                  if (_viewModel.isProcessing)
+                  if (state.isProcessing)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -149,7 +121,7 @@ class _InterpretViewState extends State<InterpretView> {
                             ),
                           ),
                           Text(
-                            _viewModel.statusMessage,
+                            state.statusMessage,
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).colorScheme.primary,
@@ -185,11 +157,11 @@ class _InterpretViewState extends State<InterpretView> {
                       // 移动端：垂直布局
                       ? Column(
                           children: [
-                            _buildLanguageSelector(),
+                            _buildLanguageSelector(ref, context),
                             const SizedBox(height: 12),
-                            _buildTranslateButton(),
+                            _buildTranslateButton(context, ref),
                             const SizedBox(height: 12),
-                            _buildRecordButton(),
+                            _buildRecordButton(context, ref),
                             const SizedBox(height: 12),
                             _buildLayoutPopupWindow(),
                           ],
@@ -198,11 +170,11 @@ class _InterpretViewState extends State<InterpretView> {
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _buildLanguageSelector(),
+                            _buildLanguageSelector(ref, context),
                             const SizedBox(width: 16),
-                            _buildTranslateButton(),
+                            _buildTranslateButton(context, ref),
                             const SizedBox(width: 16),
-                            _buildRecordButton(),
+                            _buildRecordButton(context, ref),
                             const SizedBox(width: 16),
                             Expanded(child: _buildLayoutPopupWindow()),
                           ],
@@ -235,7 +207,30 @@ class _InterpretViewState extends State<InterpretView> {
                             children: [
                               Expanded(
                                 child: TextField(
-                                  controller: _sourceController,
+                                  controller:
+                                      TextEditingController(
+                                          text: state.inputText,
+                                        )
+                                        ..selection =
+                                            TextSelection.fromPosition(
+                                              TextPosition(
+                                                offset: state.inputText.length,
+                                              ),
+                                            ),
+                                  onChanged: (text) {
+                                    ref
+                                        .read(
+                                          interpretViewModelProvider.notifier,
+                                        )
+                                        .setInputText(text);
+                                  },
+                                  onSubmitted: (text) {
+                                    ref
+                                        .read(
+                                          interpretViewModelProvider.notifier,
+                                        )
+                                        .translateText(text);
+                                  },
                                   maxLines: null,
                                   textAlignVertical: TextAlignVertical.top,
                                   decoration: InputDecoration(
@@ -287,7 +282,17 @@ class _InterpretViewState extends State<InterpretView> {
                             children: [
                               Expanded(
                                 child: TextField(
-                                  controller: _targetController,
+                                  controller:
+                                      TextEditingController(
+                                          text: state.translatedText,
+                                        )
+                                        ..selection =
+                                            TextSelection.fromPosition(
+                                              TextPosition(
+                                                offset:
+                                                    state.translatedText.length,
+                                              ),
+                                            ),
                                   maxLines: null,
                                   textAlignVertical: TextAlignVertical.top,
                                   readOnly: true,
@@ -328,14 +333,14 @@ class _InterpretViewState extends State<InterpretView> {
     );
   }
 
-  Widget _buildLanguageSelector() {
+  Widget _buildLanguageSelector(WidgetRef ref, BuildContext context) {
     return SizedBox(
       width: 120,
       child: MouseRegion(
         key: _languageSelectorKey,
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
-          onTap: () => _showLanguageSelector(),
+          onTap: () => _showLanguageSelector(context, ref),
           child: Builder(
             builder: (buttonContext) => AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -370,7 +375,12 @@ class _InterpretViewState extends State<InterpretView> {
                     width: 30,
                     child: Center(
                       child: Text(
-                        _languageCodes[_sourceLanguage] ?? _sourceLanguage,
+                        _languageCodes[ref
+                                .watch(interpretViewModelProvider)
+                                .sourceLanguage] ??
+                            ref
+                                .watch(interpretViewModelProvider)
+                                .sourceLanguage,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -395,7 +405,12 @@ class _InterpretViewState extends State<InterpretView> {
                     width: 30,
                     child: Center(
                       child: Text(
-                        _languageCodes[_targetLanguage] ?? _targetLanguage,
+                        _languageCodes[ref
+                                .watch(interpretViewModelProvider)
+                                .targetLanguage] ??
+                            ref
+                                .watch(interpretViewModelProvider)
+                                .targetLanguage,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -653,466 +668,94 @@ class _InterpretViewState extends State<InterpretView> {
     );
   }
 
-  void _showLanguageSelector() {
-    // 获取MouseRegion的位置信息
-    final RenderBox? selectorRenderBox =
-        _languageSelectorKey.currentContext?.findRenderObject() as RenderBox?;
+  void _showLanguageSelector(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(interpretViewModelProvider);
+    String sourceLanguage = state.sourceLanguage;
+    String targetLanguage = state.targetLanguage;
 
-    if (selectorRenderBox == null) return;
-
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
-
-    final selectorPosition = selectorRenderBox.localToGlobal(
-      Offset.zero,
-      ancestor: overlay,
-    );
-
-    // 计算可用宽度和最佳宽度
-    const double desiredWidth = 600;
-    final double screenWidth = overlay.size.width;
-    final double availableWidth = screenWidth - selectorPosition.dx;
-
-    // 如果从左边缘开始放不下，计算合适的宽度和位置
-    double actualWidth = desiredWidth;
-    double horizontalOffset = 0;
-
-    if (availableWidth < desiredWidth) {
-      // 尝试向左移动菜单，使其右边缘对齐屏幕右边缘
-      horizontalOffset = desiredWidth - availableWidth;
-
-      // 如果左移后仍然放不下（MouseRegion太靠右），则缩小宽度
-      if (selectorPosition.dx < horizontalOffset) {
-        horizontalOffset = selectorPosition.dx; // 最多左移到屏幕左边缘
-        actualWidth = screenWidth; // 使用全屏宽度
-      }
-    }
-
-    // 计算弹出框位置：从MouseRegion左下方弹出
-    final position =
-        RelativeRect.fromRect(
-          Rect.fromLTWH(
-            selectorPosition.dx,
-            selectorPosition.dy,
-            selectorRenderBox.size.width,
-            selectorRenderBox.size.height,
-          ),
-          Offset.zero & overlay.size,
-        ).shift(
-          Offset(
-            -horizontalOffset, // 左对齐，根据需要向左偏移
-            selectorRenderBox.size.height, // 向下偏移，使菜单在MouseRegion下方
-          ),
-        );
-
-    // 在StatefulBuilder外部创建临时变量
-    String tempSourceLanguage = _sourceLanguage;
-    String tempTargetLanguage = _targetLanguage;
-
-    // 保存外部组件的setState方法引用
-    final outerSetState = setState;
-
-    showMenu(
+    showDialog(
       context: context,
-      position: position,
-      items: [
-        PopupMenuItem(
-          padding: EdgeInsets.zero,
-          child: Material(
-            child: Container(
-              width: actualWidth,
-              height: 500,
-              constraints: BoxConstraints(
-                minWidth: 300,
-                maxWidth: screenWidth - 16, // 留出一些边距
-              ),
-              padding: const EdgeInsets.all(16),
-              child: StatefulBuilder(
-                builder: (context, setState) {
-                  return Column(
-                    children: [
-                      // 标题
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.language_rounded,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '选择语言',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      // 左右分栏的语言选择区域
-                      Expanded(
-                        child: Row(
-                          children: [
-                            // 左侧：源语言选择
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.mic_rounded,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                          size: 14,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '源语言',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Expanded(
-                                    child: ListView.builder(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                      ),
-                                      itemCount: _languages.length,
-                                      itemBuilder: (context, index) {
-                                        final language = _languages[index];
-                                        final isSelected =
-                                            language == tempSourceLanguage;
-
-                                        return InkWell(
-                                          onTap: () {
-                                            setState(() {
-                                              tempSourceLanguage = language;
-                                            });
-                                          },
-                                          child: Container(
-                                            margin: const EdgeInsets.symmetric(
-                                              horizontal: 4,
-                                              vertical: 2,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 10,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primaryContainer
-                                                  : Colors.transparent,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.primary
-                                                    : Colors.transparent,
-                                                width: 1.0,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  _languageCodes[language] ??
-                                                      language,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.bold
-                                                        : FontWeight.w500,
-                                                    color: isSelected
-                                                        ? Theme.of(
-                                                            context,
-                                                          ).colorScheme.primary
-                                                        : Theme.of(context)
-                                                              .colorScheme
-                                                              .onSurface,
-                                                  ),
-                                                ),
-                                                if (isSelected)
-                                                  Icon(
-                                                    Icons.check_rounded,
-                                                    color: Theme.of(
-                                                      context,
-                                                    ).colorScheme.primary,
-                                                    size: 18,
-                                                  )
-                                                else
-                                                  const SizedBox(width: 18),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // 中间：交换按钮
-                            Container(
-                              width: 40,
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  MouseRegion(
-                                    cursor: SystemMouseCursors.click,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          final temp = tempSourceLanguage;
-                                          tempSourceLanguage =
-                                              tempTargetLanguage;
-                                          tempTargetLanguage = temp;
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primaryContainer,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          Icons.compare_arrows_rounded,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                          size: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // 右侧：目标语言选择
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.translate_rounded,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                          size: 12,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '目标语言',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Expanded(
-                                    child: ListView.builder(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                      ),
-                                      itemCount: _languages.length,
-                                      itemBuilder: (context, index) {
-                                        final language = _languages[index];
-                                        final isSelected =
-                                            language == tempTargetLanguage;
-
-                                        return InkWell(
-                                          onTap: () {
-                                            setState(() {
-                                              tempTargetLanguage = language;
-                                            });
-                                          },
-                                          child: Container(
-                                            margin: const EdgeInsets.symmetric(
-                                              horizontal: 4,
-                                              vertical: 2,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 10,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primaryContainer
-                                                  : Colors.transparent,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.primary
-                                                    : Colors.transparent,
-                                                width: 1.0,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  _languageCodes[language] ??
-                                                      language,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.bold
-                                                        : FontWeight.w500,
-                                                    color: isSelected
-                                                        ? Theme.of(
-                                                            context,
-                                                          ).colorScheme.primary
-                                                        : Theme.of(context)
-                                                              .colorScheme
-                                                              .onSurface,
-                                                  ),
-                                                ),
-                                                if (isSelected)
-                                                  Icon(
-                                                    Icons.check_rounded,
-                                                    color: Theme.of(
-                                                      context,
-                                                    ).colorScheme.primary,
-                                                    size: 12,
-                                                  )
-                                                else
-                                                  const SizedBox(width: 18),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Divider(),
-                      // 底部确认按钮
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 44,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              // ✅ 使用新方法一次性设置两种语言，避免发送两次WebSocket消息
-                              await _viewModel.setLanguages(
-                                tempSourceLanguage,
-                                tempTargetLanguage,
-                              );
-
-                              outerSetState(() {
-                                _sourceLanguage = tempSourceLanguage;
-                                _targetLanguage = tempTargetLanguage;
-                              });
-                              Navigator.pop(context);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
-                              foregroundColor: Theme.of(
-                                context,
-                              ).colorScheme.onPrimary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              '确认',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('语言选择'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 源语言选择
+            DropdownButtonFormField<String>(
+              value: sourceLanguage,
+              decoration: const InputDecoration(labelText: '源语言'),
+              items: _languages
+                  .map(
+                    (lang) => DropdownMenuItem(value: lang, child: Text(lang)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null && value != targetLanguage) {
+                  sourceLanguage = value;
+                }
+              },
             ),
-          ),
+            const SizedBox(height: 16),
+            // 目标语言选择
+            DropdownButtonFormField<String>(
+              value: targetLanguage,
+              decoration: const InputDecoration(labelText: '目标语言'),
+              items: _languages
+                  .map(
+                    (lang) => DropdownMenuItem(value: lang, child: Text(lang)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null && value != sourceLanguage) {
+                  targetLanguage = value;
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            // 交换语言按钮
+            ElevatedButton.icon(
+              onPressed: () {
+                final temp = sourceLanguage;
+                sourceLanguage = targetLanguage;
+                targetLanguage = temp;
+                // 重新构建对话框以更新UI
+                Navigator.pop(dialogContext);
+                _showLanguageSelector(context, ref);
+              },
+              icon: const Icon(Icons.swap_horiz),
+              label: const Text('交换语言'),
+            ),
+          ],
         ),
-      ],
-      elevation: 8,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              ref
+                  .read(interpretViewModelProvider.notifier)
+                  .setLanguages(sourceLanguage, targetLanguage);
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
   }
 
-  void _swapLanguages() {
-    setState(() {
-      final temp = _sourceLanguage;
-      _sourceLanguage = _targetLanguage;
-      _targetLanguage = temp;
-
-      // 同时交换文本内容
-      final tempText = _sourceController.text;
-      _sourceController.text = _targetController.text;
-      _targetController.text = tempText;
-    });
-
-    // 更新 ViewModel 的语言设置
-    _viewModel.swapLanguages();
+  void _swapLanguages(WidgetRef ref) {
+    // 调用 ViewModel 的语言交换方法
+    ref.read(interpretViewModelProvider.notifier).swapLanguages();
   }
 
   /// 构建翻译按钮
-  Widget _buildTranslateButton() {
+  Widget _buildTranslateButton(BuildContext context, WidgetRef ref) {
     final isMobile = MediaQuery.of(context).size.width < 600;
-    final isProcessing = _viewModel.isProcessing;
+    final state = ref.watch(interpretViewModelProvider);
+    final isProcessing = state.isProcessing;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1120,9 +763,11 @@ class _InterpretViewState extends State<InterpretView> {
         onTap: isProcessing
             ? null
             : () {
-                final text = _sourceController.text.trim();
+                final text = state.inputText.trim();
                 if (text.isNotEmpty) {
-                  _viewModel.translateText(text);
+                  ref
+                      .read(interpretViewModelProvider.notifier)
+                      .translateText(text);
                 }
               },
         child: AnimatedContainer(
@@ -1185,15 +830,16 @@ class _InterpretViewState extends State<InterpretView> {
   }
 
   /// 构建录音按钮
-  Widget _buildRecordButton() {
+  Widget _buildRecordButton(BuildContext context, WidgetRef ref) {
     final isMobile = MediaQuery.of(context).size.width < 600;
-    final isRecording = _viewModel.isProcessing;
+    final state = ref.watch(interpretViewModelProvider);
+    final isRecording = state.isProcessing;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: () {
-          _viewModel.toggleRecording();
+          ref.read(interpretViewModelProvider.notifier).toggleRecording();
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
