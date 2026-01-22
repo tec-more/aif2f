@@ -18,8 +18,10 @@ class InterpretState {
   final String oneContentTypes;
   final String twoContentTypes;
   final String statusMessage;
-  final String inputText;
-  final String translatedText;
+  final String inputOneText;
+  final String translatedOneText;
+  final String inputTwoText;
+  final String translatedTwoText;
   final String sourceOneLanguage;
   final String targetOneLanguage;
   final String sourceTwoLanguage;
@@ -38,8 +40,10 @@ class InterpretState {
     //o2o 只显示源语言，s2s 只显示目标语言，o2s 显示源语言和目标语言，l2l 源语言和目标语言分离
     this.twoContentTypes = 'o2o',
     this.statusMessage = '',
-    this.inputText = '',
-    this.translatedText = '',
+    this.inputOneText = '',
+    this.translatedOneText = '',
+    this.inputTwoText = '',
+    this.translatedTwoText = '',
     this.sourceOneLanguage = '英语',
     this.targetOneLanguage = '中文',
     this.sourceTwoLanguage = '英语',
@@ -57,8 +61,10 @@ class InterpretState {
     String? oneContentTypes,
     String? twoContentTypes,
     String? statusMessage,
-    String? inputText,
-    String? translatedText,
+    String? inputOneText,
+    String? translatedOneText,
+    String? inputTwoText,
+    String? translatedTwoText,
     String? sourceOneLanguage,
     String? targetOneLanguage,
     String? sourceTwoLanguage,
@@ -75,8 +81,10 @@ class InterpretState {
       oneContentTypes: oneContentTypes ?? this.oneContentTypes,
       twoContentTypes: twoContentTypes ?? this.twoContentTypes,
       statusMessage: statusMessage ?? this.statusMessage,
-      inputText: inputText ?? this.inputText,
-      translatedText: translatedText ?? this.translatedText,
+      inputOneText: inputOneText ?? this.inputOneText,
+      translatedOneText: translatedTwoText ?? this.translatedOneText,
+      inputTwoText: inputTwoText ?? this.inputTwoText,
+      translatedTwoText: translatedTwoText ?? this.translatedTwoText,
       sourceOneLanguage: sourceOneLanguage ?? this.sourceOneLanguage,
       targetOneLanguage: targetOneLanguage ?? this.targetOneLanguage,
       sourceTwoLanguage: sourceTwoLanguage ?? this.sourceTwoLanguage,
@@ -136,15 +144,15 @@ class InterpretViewModel extends Notifier<InterpretState> {
     // 监听翻译结果流
     _translationSubscription = _translationService.translationStream.listen(
       (delta) {
-        final newTranslatedText = '${state.translatedText}$delta';
+        final newTranslatedText = '${state.translatedOneText}$delta';
         final newTranslation = TranslationResult(
-          sourceText: state.inputText,
+          sourceText: state.inputOneText,
           targetText: newTranslatedText,
           sourceLanguage: state.sourceOneLanguage,
           targetLanguage: state.sourceOneLanguage,
         );
         state = state.copyWith(
-          translatedText: newTranslatedText,
+          translatedOneText: newTranslatedText,
           currentTranslation: newTranslation,
         );
       },
@@ -161,7 +169,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
     _recognizedTextSubscription = _translationService.recognizedTextStream
         .listen(
           (transcript) {
-            state = state.copyWith(inputText: transcript);
+            state = state.copyWith(inputOneText: transcript);
           },
           onError: (error) {
             debugPrint('识别文本流错误: $error');
@@ -192,20 +200,33 @@ class InterpretViewModel extends Notifier<InterpretState> {
   }
 
   /// 设置输入文本
-  void setInputText(String text) {
-    state = state.copyWith(inputText: text);
+  void setInputText(String text, [int type = 1]) {
+    if (type == 1) {
+      state = state.copyWith(inputOneText: text);
+    } else {
+      state = state.copyWith(inputTwoText: text);
+    }
   }
 
   /// 翻译文本
-  Future<void> translateText(String text) async {
+  Future<void> translateText(String text, [int type = 1]) async {
     if (text.isEmpty || state.isProcessing) return;
 
-    state = state.copyWith(
-      inputText: text,
-      translatedText: '', // 清空之前的翻译
-      isProcessing: true,
-      statusMessage: '正在翻译...',
-    );
+    if (type == 1) {
+      state = state.copyWith(
+        inputOneText: text,
+        translatedOneText: '', // 清空之前的翻译
+        isProcessing: true,
+        statusMessage: '正在翻译...',
+      );
+    } else {
+      state = state.copyWith(
+        inputTwoText: text,
+        translatedTwoText: '', // 清空之前的翻译
+        isProcessing: true,
+        statusMessage: '正在翻译...',
+      );
+    }
 
     try {
       _translationService.sendTextMessage(text);
@@ -266,8 +287,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
     final newTargetLanguage = type == 1
         ? state.targetOneLanguage
         : state.targetTwoLanguage;
-    final newInputText = state.translatedText;
-    final newTranslatedText = state.inputText;
+    final newInputOneText = state.translatedOneText;
+    final newTranslatedOneText = state.inputOneText;
     debugPrint('切换语言: $newSourceLanguage -> $newTargetLanguage');
     if (type == 1) {
       setOneSourceLanguage(newTargetLanguage);
@@ -289,8 +310,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
       // targetTwoLanguage: type == 2
       //     ? newTargetLanguage
       //     : state.targetTwoLanguage,
-      inputText: newInputText,
-      translatedText: newTranslatedText,
+      inputOneText: newInputOneText,
+      translatedOneText: newTranslatedOneText,
     );
 
     // 更新翻译服务的语言配置
@@ -302,8 +323,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
     // 更新翻译结果
     final newTranslation = TranslationResult(
-      sourceText: newInputText,
-      targetText: newTranslatedText,
+      sourceText: newInputOneText,
+      targetText: newTranslatedOneText,
       sourceLanguage: newSourceLanguage,
       targetLanguage: newTargetLanguage,
     );
@@ -323,8 +344,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// 清空翻译结果
   void clearTranslation() {
     state = state.copyWith(
-      inputText: '',
-      translatedText: '',
+      inputOneText: '',
+      translatedOneText: '',
       currentTranslation: null,
     );
   }
@@ -334,8 +355,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
     if (state.isProcessing) return;
 
     state = state.copyWith(
-      inputText: '',
-      translatedText: '',
+      inputOneText: '',
+      translatedOneText: '',
       isProcessing: true,
       statusMessage: '正在录音...',
     );

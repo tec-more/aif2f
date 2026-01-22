@@ -676,129 +676,177 @@ class InterpretView extends ConsumerWidget {
         ),
         SizedBox(height: MediaQuery.of(context).size.width < 600 ? 16 : 24),
         // 文本输入/输出卡片
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: SizedBox(
-            height:
-                MediaQuery.of(context).size.height *
-                (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.5),
-            child: Column(
-              children: [
-                // 源语言输入区
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(
-                      MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller:
-                                TextEditingController(text: state.inputText)
-                                  ..selection = TextSelection.fromPosition(
-                                    TextPosition(
-                                      offset: state.inputText.length,
-                                    ),
-                                  ),
-                            onChanged: (text) {
-                              ref
-                                  .read(interpretViewModelProvider.notifier)
-                                  .setInputText(text);
-                            },
-                            onSubmitted: (text) {
-                              ref
-                                  .read(interpretViewModelProvider.notifier)
-                                  .translateText(text);
-                            },
-                            maxLines: null,
-                            textAlignVertical: TextAlignVertical.top,
-                            decoration: InputDecoration(
-                              hintText: '源语言',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              hintStyle: TextStyle(
-                                fontSize:
-                                    MediaQuery.of(context).size.width < 600
-                                    ? 14
-                                    : 16,
-                              ),
-                            ),
-                            style: TextStyle(
-                              fontSize: MediaQuery.of(context).size.width < 600
-                                  ? 12
-                                  : 16,
-                              color: Colors.black87,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // 分隔线
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  indent: MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                  endIndent: MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
-                // 目标语言输出区
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(
-                      MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller:
-                                TextEditingController(
-                                    text: state.translatedText,
-                                  )
-                                  ..selection = TextSelection.fromPosition(
-                                    TextPosition(
-                                      offset: state.translatedText.length,
-                                    ),
-                                  ),
-                            maxLines: null,
-                            textAlignVertical: TextAlignVertical.top,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              hintText: '目标语言',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              hintStyle: TextStyle(
-                                fontSize:
-                                    MediaQuery.of(context).size.width < 600
-                                    ? 14
-                                    : 16,
-                              ),
-                            ),
-                            style: TextStyle(
-                              fontSize: MediaQuery.of(context).size.width < 600
-                                  ? 12
-                                  : 16,
-                              color: Colors.black87,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        _buildF2fTextField(context, ref, 1),
       ],
+    );
+  }
+
+  /// 构建O2O文本框/输入卡片
+  Widget _buildO2OTextField(
+    BuildContext context,
+    WidgetRef ref, [
+    int type = 1,
+  ]) {
+    final state = ref.watch(interpretViewModelProvider);
+    return Card(child: SizedBox(child: Text(state.inputOneText)));
+  }
+
+  /// 构建S2S文本框/输入卡片
+  Widget _buildS2STextField(
+    BuildContext context,
+    WidgetRef ref, [
+    int type = 1,
+  ]) {
+    final state = ref.watch(interpretViewModelProvider);
+    return Card(child: SizedBox(child: Text(state.inputOneText)));
+  }
+
+  /// 构建O2S文本框/输入卡片
+  Widget _buildO2STextField(
+    BuildContext context,
+    WidgetRef ref, [
+    int type = 1,
+  ]) {
+    final state = ref.watch(interpretViewModelProvider);
+    return Card(child: SizedBox(child: Text(state.inputOneText)));
+  }
+
+  /// 构建F2F文本输入/输出卡片
+  Widget _buildF2fTextField(
+    BuildContext context,
+    WidgetRef ref, [
+    int type = 1,
+  ]) {
+    final state = ref.watch(interpretViewModelProvider);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: SizedBox(
+        height:
+            MediaQuery.of(context).size.height *
+            (MediaQuery.of(context).size.width < 600 ? 0.65 : 0.65),
+        child: Column(
+          children: [
+            // 源语言输入区
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width < 600 ? 12 : 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller:
+                            TextEditingController(
+                                text: type == 1
+                                    ? state.inputOneText
+                                    : state.inputTwoText,
+                              )
+                              ..selection = TextSelection.fromPosition(
+                                TextPosition(
+                                  offset: type == 1
+                                      ? state.inputOneText.length
+                                      : state.inputTwoText.length,
+                                ),
+                              ),
+                        onChanged: (text) {
+                          ref
+                              .read(interpretViewModelProvider.notifier)
+                              .setInputText(text, type);
+                        },
+                        onSubmitted: (text) {
+                          ref
+                              .read(interpretViewModelProvider.notifier)
+                              .translateText(text, type);
+                        },
+                        maxLines: null,
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: InputDecoration(
+                          hintText: '源语言',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          hintStyle: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 14
+                                : 16,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontSize: MediaQuery.of(context).size.width < 600
+                              ? 12
+                              : 16,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // 分隔线
+            Divider(
+              height: 1,
+              thickness: 1,
+              indent: MediaQuery.of(context).size.width < 600 ? 12 : 24,
+              endIndent: MediaQuery.of(context).size.width < 600 ? 12 : 24,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+            // 目标语言输出区
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width < 600 ? 12 : 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller:
+                            TextEditingController(
+                                text: type == 1
+                                    ? state.translatedOneText
+                                    : state.translatedTwoText,
+                              )
+                              ..selection = TextSelection.fromPosition(
+                                TextPosition(
+                                  offset: type == 1
+                                      ? state.translatedOneText.length
+                                      : state.translatedTwoText.length,
+                                ),
+                              ),
+                        maxLines: null,
+                        textAlignVertical: TextAlignVertical.top,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          hintText: '目标语言',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          hintStyle: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 14
+                                : 16,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontSize: MediaQuery.of(context).size.width < 600
+                              ? 12
+                              : 16,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -830,128 +878,7 @@ class InterpretView extends ConsumerWidget {
         ),
         SizedBox(height: MediaQuery.of(context).size.width < 600 ? 16 : 24),
         // 文本输入/输出卡片
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: SizedBox(
-            height:
-                MediaQuery.of(context).size.height *
-                (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.5),
-            child: Column(
-              children: [
-                // 源语言输入区
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(
-                      MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller:
-                                TextEditingController(text: state.inputText)
-                                  ..selection = TextSelection.fromPosition(
-                                    TextPosition(
-                                      offset: state.inputText.length,
-                                    ),
-                                  ),
-                            onChanged: (text) {
-                              ref
-                                  .read(interpretViewModelProvider.notifier)
-                                  .setInputText(text);
-                            },
-                            onSubmitted: (text) {
-                              ref
-                                  .read(interpretViewModelProvider.notifier)
-                                  .translateText(text);
-                            },
-                            maxLines: null,
-                            textAlignVertical: TextAlignVertical.top,
-                            decoration: InputDecoration(
-                              hintText: '源语言',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              hintStyle: TextStyle(
-                                fontSize:
-                                    MediaQuery.of(context).size.width < 600
-                                    ? 14
-                                    : 16,
-                              ),
-                            ),
-                            style: TextStyle(
-                              fontSize: MediaQuery.of(context).size.width < 600
-                                  ? 12
-                                  : 16,
-                              color: Colors.black87,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // 分隔线
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  indent: MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                  endIndent: MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
-                // 目标语言输出区
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(
-                      MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller:
-                                TextEditingController(
-                                    text: state.translatedText,
-                                  )
-                                  ..selection = TextSelection.fromPosition(
-                                    TextPosition(
-                                      offset: state.translatedText.length,
-                                    ),
-                                  ),
-                            maxLines: null,
-                            textAlignVertical: TextAlignVertical.top,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              hintText: '目标语言',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              hintStyle: TextStyle(
-                                fontSize:
-                                    MediaQuery.of(context).size.width < 600
-                                    ? 14
-                                    : 16,
-                              ),
-                            ),
-                            style: TextStyle(
-                              fontSize: MediaQuery.of(context).size.width < 600
-                                  ? 12
-                                  : 16,
-                              color: Colors.black87,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        _buildF2fTextField(context, ref, 2),
       ],
     );
   }
