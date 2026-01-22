@@ -94,66 +94,50 @@ class InterpretView extends ConsumerWidget {
               // 欢迎标题
               Row(
                 children: [
+                  // 左侧文本 - 占用剩余空间
                   Expanded(
-                    child: Text(
-                      '欢迎使用AI传译',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            fontSize: MediaQuery.of(context).size.width < 600
-                                ? 20
-                                : 24,
-                          ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '欢迎使用AI传译',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontSize:
+                                    MediaQuery.of(context).size.width < 600
+                                    ? 20
+                                    : 24,
+                              ),
+                        ),
+                        SizedBox(height: 4), // 添加间距
+                        Text(
+                          '轻松实现多语言翻译',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontSize:
+                                    MediaQuery.of(context).size.width < 600
+                                    ? 12
+                                    : 14,
+                              ),
+                        ),
+                      ],
                     ),
                   ),
-                  // 状态指示器
-                  if (state.isProcessing)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            state.statusMessage,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+
+                  // SizedBox(width: 16), // 左右间距
+                  // 右侧按钮 - 自适应宽度
+                  Row(
+                    mainAxisSize: MainAxisSize.min, // 重要：Row只占据内容所需空间
+                    children: [
+                      if (Platform.isWindows) _systemSoundButton(context, ref),
+                      if (Platform.isWindows) SizedBox(width: 16),
+                      _buildRecordButton(context, ref),
+                    ],
+                  ),
                 ],
               ),
-              SizedBox(height: MediaQuery.of(context).size.width < 600 ? 4 : 8),
-              Text(
-                '轻松实现多语言翻译',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: MediaQuery.of(context).size.width < 600 ? 12 : 14,
-                ),
-              ),
+
               SizedBox(
                 height: MediaQuery.of(context).size.width < 600 ? 16 : 24,
               ),
@@ -173,16 +157,8 @@ class InterpretView extends ConsumerWidget {
                           children: [
                             _buildLanguageSelector(ref, context),
                             const SizedBox(height: 12),
-                            _buildTranslateButton(context, ref),
-                            const SizedBox(height: 12),
-                            _buildRecordButton(context, ref),
-                            const SizedBox(height: 12),
-                            Platform.isWindows
-                                ? _systemSoundButton(context, ref)
-                                : const SizedBox(height: 0),
-                            Platform.isWindows
-                                ? const SizedBox(height: 12)
-                                : const SizedBox(height: 0),
+                            // _buildTranslateButton(context, ref),
+                            // const SizedBox(height: 12),
                             _buildLayoutPopupWindow(),
                           ],
                         )
@@ -194,14 +170,6 @@ class InterpretView extends ConsumerWidget {
                             const SizedBox(width: 16),
                             // _buildTranslateButton(context, ref),
                             // const SizedBox(width: 16),
-                            _buildRecordButton(context, ref),
-                            const SizedBox(width: 16),
-                            Platform.isWindows
-                                ? _systemSoundButton(context, ref)
-                                : const SizedBox(height: 0),
-                            Platform.isWindows
-                                ? const SizedBox(height: 12)
-                                : const SizedBox(height: 0),
                             Expanded(child: _buildLayoutPopupWindow()),
                           ],
                         ),
@@ -1090,7 +1058,7 @@ class InterpretView extends ConsumerWidget {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: isMobile ? double.infinity : 140,
+          width: isMobile ? 80 : 200,
           height: isMobile ? 48 : 44,
           padding: EdgeInsets.symmetric(
             horizontal: isMobile ? 20 : 16,
@@ -1133,7 +1101,7 @@ class InterpretView extends ConsumerWidget {
               if (isMobile) const SizedBox(width: 8),
               if (isMobile)
                 Text(
-                  isRecording ? '录音中...' : '录音',
+                  isRecording ? '录音中...' : '',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
