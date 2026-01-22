@@ -350,7 +350,7 @@ class InterpretView extends ConsumerWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: SizedBox(
-        width: 120,
+        width: 150,
         child: MouseRegion(
           key: _languageSelectorKey,
           cursor: SystemMouseCursors.click,
@@ -387,21 +387,33 @@ class InterpretView extends ConsumerWidget {
                   children: [
                     // 源语言 - 移除Expanded，使用固定宽度
                     SizedBox(
-                      width: 30,
-                      child: Center(
-                        child: Text(
-                          _languageCodes[ref
-                                  .watch(interpretViewModelProvider)
-                                  .sourceLanguage] ??
-                              ref
-                                  .watch(interpretViewModelProvider)
-                                  .sourceLanguage,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(buttonContext).colorScheme.primary,
+                      width: 40,
+                      child: Row(
+                        children: [
+                          Image.asset(
+                            'icons/flags/png100px/${_languageFlags[ref.watch(interpretViewModelProvider).sourceLanguage]}.png',
+                            package: 'country_icons',
+                            width: 16,
+                            height: 12,
+                            fit: BoxFit.cover,
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _languageCodes[ref
+                                    .watch(interpretViewModelProvider)
+                                    .sourceLanguage] ??
+                                ref
+                                    .watch(interpretViewModelProvider)
+                                    .sourceLanguage,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(
+                                buttonContext,
+                              ).colorScheme.primary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -417,21 +429,33 @@ class InterpretView extends ConsumerWidget {
 
                     // 目标语言 - 移除Expanded，使用固定宽度
                     SizedBox(
-                      width: 30,
-                      child: Center(
-                        child: Text(
-                          _languageCodes[ref
-                                  .watch(interpretViewModelProvider)
-                                  .targetLanguage] ??
-                              ref
-                                  .watch(interpretViewModelProvider)
-                                  .targetLanguage,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(buttonContext).colorScheme.primary,
+                      width: 40,
+                      child: Row(
+                        children: [
+                          Image.asset(
+                            'icons/flags/png100px/${_languageFlags[ref.watch(interpretViewModelProvider).targetLanguage]}.png',
+                            package: 'country_icons',
+                            width: 16,
+                            height: 12,
+                            fit: BoxFit.cover,
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _languageCodes[ref
+                                    .watch(interpretViewModelProvider)
+                                    .targetLanguage] ??
+                                ref
+                                    .watch(interpretViewModelProvider)
+                                    .targetLanguage,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(
+                                buttonContext,
+                              ).colorScheme.primary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -940,11 +964,6 @@ class InterpretView extends ConsumerWidget {
 
     // 插入OverlayEntry
     overlay.insert(overlayEntry);
-  }
-
-  void _swapLanguages(WidgetRef ref) {
-    // 调用 ViewModel 的语言交换方法
-    ref.read(interpretViewModelProvider.notifier).swapLanguages();
   }
 
   /// 构建翻译按钮
