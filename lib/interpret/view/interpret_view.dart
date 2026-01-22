@@ -696,6 +696,78 @@ class InterpretView extends ConsumerWidget {
     );
   }
 
+  /// 构建录音按钮
+  Widget _buildRecordButton(BuildContext context, WidgetRef ref) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final state = ref.watch(interpretViewModelProvider);
+    final isRecording = state.isProcessing;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          ref.read(interpretViewModelProvider.notifier).toggleRecording();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: isMobile ? 80 : 200,
+          height: isMobile ? 48 : 44,
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 20 : 16,
+            vertical: 12,
+          ),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isRecording
+                  ? [Colors.red.withOpacity(0.8), Colors.red.withOpacity(0.6)]
+                  : [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(isMobile ? 12 : 8),
+            boxShadow: [
+              BoxShadow(
+                color: isRecording
+                    ? Colors.red.withOpacity(0.3)
+                    : Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isRecording)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              else
+                Icon(Icons.mic_rounded, color: Colors.white, size: 20),
+              if (isMobile) const SizedBox(width: 8),
+              if (isMobile)
+                Text(
+                  isRecording ? '录音中...' : '',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示语言选择器
   void _showLanguageSelector(BuildContext context, WidgetRef ref) {
     // 获取语言选择器的位置
     final renderBox =
@@ -952,76 +1024,5 @@ class InterpretView extends ConsumerWidget {
 
     // 插入OverlayEntry
     overlay.insert(overlayEntry);
-  }
-
-  /// 构建录音按钮
-  Widget _buildRecordButton(BuildContext context, WidgetRef ref) {
-    final isMobile = MediaQuery.of(context).size.width < 600;
-    final state = ref.watch(interpretViewModelProvider);
-    final isRecording = state.isProcessing;
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          ref.read(interpretViewModelProvider.notifier).toggleRecording();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: isMobile ? 80 : 200,
-          height: isMobile ? 48 : 44,
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 20 : 16,
-            vertical: 12,
-          ),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isRecording
-                  ? [Colors.red.withOpacity(0.8), Colors.red.withOpacity(0.6)]
-                  : [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                    ],
-            ),
-            borderRadius: BorderRadius.circular(isMobile ? 12 : 8),
-            boxShadow: [
-              BoxShadow(
-                color: isRecording
-                    ? Colors.red.withOpacity(0.3)
-                    : Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isRecording)
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              else
-                Icon(Icons.mic_rounded, color: Colors.white, size: 20),
-              if (isMobile) const SizedBox(width: 8),
-              if (isMobile)
-                Text(
-                  isRecording ? '录音中...' : '',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
