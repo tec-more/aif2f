@@ -151,28 +151,16 @@ class InterpretView extends ConsumerWidget {
                   padding: EdgeInsets.all(
                     MediaQuery.of(context).size.width < 600 ? 8 : 12,
                   ),
-                  child: MediaQuery.of(context).size.width < 600
-                      // 移动端：垂直布局
-                      ? Column(
-                          children: [
-                            _buildLanguageSelector(ref, context),
-                            const SizedBox(height: 12),
-                            // _buildTranslateButton(context, ref),
-                            // const SizedBox(height: 12),
-                            _buildLayoutPopupWindow(),
-                          ],
-                        )
-                      // 桌面端：水平布局
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildLanguageSelector(ref, context),
-                            const SizedBox(width: 16),
-                            // _buildTranslateButton(context, ref),
-                            // const SizedBox(width: 16),
-                            Expanded(child: _buildLayoutPopupWindow()),
-                          ],
-                        ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildLanguageSelector(ref, context),
+                      const SizedBox(width: 16),
+                      // _buildTranslateButton(context, ref),
+                      // const SizedBox(width: 16),
+                      Expanded(child: _buildLayoutPopupWindow()),
+                    ],
+                  ),
                 ),
               ),
               SizedBox(
@@ -964,84 +952,6 @@ class InterpretView extends ConsumerWidget {
 
     // 插入OverlayEntry
     overlay.insert(overlayEntry);
-  }
-
-  /// 构建翻译按钮
-  Widget _buildTranslateButton(BuildContext context, WidgetRef ref) {
-    final isMobile = MediaQuery.of(context).size.width < 600;
-    final state = ref.watch(interpretViewModelProvider);
-    final isProcessing = state.isProcessing;
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: isProcessing
-            ? null
-            : () {
-                final text = state.inputText.trim();
-                if (text.isNotEmpty) {
-                  ref
-                      .read(interpretViewModelProvider.notifier)
-                      .translateText(text);
-                }
-              },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: isMobile ? double.infinity : 140,
-          height: isMobile ? 48 : 44,
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 20 : 16,
-            vertical: 12,
-          ),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(isMobile ? 12 : 8),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isProcessing)
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              else
-                const Icon(
-                  Icons.translate_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              if (isMobile) const SizedBox(width: 8),
-              if (isMobile)
-                Text(
-                  isProcessing ? '翻译中...' : '翻译',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   /// 构建录音按钮
