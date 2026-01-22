@@ -12,6 +12,11 @@ class InterpretState {
   final bool isProcessing;
   final bool isConnected;
   final bool isSystemSoundEnabled;
+  final int onefontSize;
+  final int twofontSize;
+  final int panelNumber;
+  final String oneContentTypes;
+  final String twoContentTypes;
   final String statusMessage;
   final String inputText;
   final String translatedText;
@@ -23,6 +28,13 @@ class InterpretState {
     this.isProcessing = false,
     this.isConnected = false,
     this.isSystemSoundEnabled = false,
+    this.onefontSize = 14,
+    this.twofontSize = 14,
+    this.panelNumber = 1,
+    //o2o 只显示源语言，s2s 只显示目标语言，o2s 显示源语言和目标语言，l2l 源语言和目标语言分离
+    this.oneContentTypes = 'o2o',
+    //o2o 只显示源语言，s2s 只显示目标语言，o2s 显示源语言和目标语言，l2l 源语言和目标语言分离
+    this.twoContentTypes = 'o2o',
     this.statusMessage = '',
     this.inputText = '',
     this.translatedText = '',
@@ -35,6 +47,11 @@ class InterpretState {
     bool? isProcessing,
     bool? isConnected,
     bool? isSystemSoundEnabled,
+    int? onefontSize,
+    int? twofontSize,
+    int? panelNumber,
+    String? oneContentTypes,
+    String? twoContentTypes,
     String? statusMessage,
     String? inputText,
     String? translatedText,
@@ -46,6 +63,11 @@ class InterpretState {
       isProcessing: isProcessing ?? this.isProcessing,
       isConnected: isConnected ?? this.isConnected,
       isSystemSoundEnabled: isSystemSoundEnabled ?? this.isSystemSoundEnabled,
+      onefontSize: onefontSize ?? this.onefontSize,
+      twofontSize: twofontSize ?? this.twofontSize,
+      panelNumber: panelNumber ?? this.panelNumber,
+      oneContentTypes: oneContentTypes ?? this.oneContentTypes,
+      twoContentTypes: twoContentTypes ?? this.twoContentTypes,
       statusMessage: statusMessage ?? this.statusMessage,
       inputText: inputText ?? this.inputText,
       translatedText: translatedText ?? this.translatedText,
@@ -311,5 +333,25 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// 切换系统声音状态
   void toggleSystemSound() {
     state = state.copyWith(isSystemSoundEnabled: !state.isSystemSoundEnabled);
+  }
+
+  void setSrcContentTypes(String srcContentTypes) {
+    state = state.copyWith(oneContentTypes: srcContentTypes);
+  }
+
+  void setTartgetContentTypes(String tartgetContentTypes) {
+    state = state.copyWith(twoContentTypes: tartgetContentTypes);
+  }
+
+  void setPanelNumber(int panelNumber) {
+    state = state.copyWith(panelNumber: panelNumber);
+  }
+
+  void setSrcfontSize(int srcfontSize) {
+    state = state.copyWith(onefontSize: srcfontSize);
+  }
+
+  void setTartgetfontSize(int tartgetfontSize) {
+    state = state.copyWith(twofontSize: tartgetfontSize);
   }
 }
