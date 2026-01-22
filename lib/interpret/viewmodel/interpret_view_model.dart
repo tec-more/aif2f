@@ -11,6 +11,7 @@ class InterpretState {
   final TranslationResult? currentTranslation;
   final bool isProcessing;
   final bool isConnected;
+  final bool isSystemSoundEnabled;
   final String statusMessage;
   final String inputText;
   final String translatedText;
@@ -21,6 +22,7 @@ class InterpretState {
     this.currentTranslation,
     this.isProcessing = false,
     this.isConnected = false,
+    this.isSystemSoundEnabled = false,
     this.statusMessage = '',
     this.inputText = '',
     this.translatedText = '',
@@ -32,6 +34,7 @@ class InterpretState {
     TranslationResult? currentTranslation,
     bool? isProcessing,
     bool? isConnected,
+    bool? isSystemSoundEnabled,
     String? statusMessage,
     String? inputText,
     String? translatedText,
@@ -42,6 +45,7 @@ class InterpretState {
       currentTranslation: currentTranslation ?? this.currentTranslation,
       isProcessing: isProcessing ?? this.isProcessing,
       isConnected: isConnected ?? this.isConnected,
+      isSystemSoundEnabled: isSystemSoundEnabled ?? this.isSystemSoundEnabled,
       statusMessage: statusMessage ?? this.statusMessage,
       inputText: inputText ?? this.inputText,
       translatedText: translatedText ?? this.translatedText,
@@ -302,5 +306,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     } else {
       await startRecording();
     }
+  }
+
+  /// 切换系统声音状态
+  void toggleSystemSound() {
+    state = state.copyWith(isSystemSoundEnabled: !state.isSystemSoundEnabled);
   }
 }

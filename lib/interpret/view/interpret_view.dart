@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -176,6 +177,12 @@ class InterpretView extends ConsumerWidget {
                             const SizedBox(height: 12),
                             _buildRecordButton(context, ref),
                             const SizedBox(height: 12),
+                            Platform.isWindows
+                                ? _systemSoundButton(context, ref)
+                                : const SizedBox(height: 0),
+                            Platform.isWindows
+                                ? const SizedBox(height: 12)
+                                : const SizedBox(height: 0),
                             _buildLayoutPopupWindow(),
                           ],
                         )
@@ -185,10 +192,16 @@ class InterpretView extends ConsumerWidget {
                           children: [
                             _buildLanguageSelector(ref, context),
                             const SizedBox(width: 16),
-                            _buildTranslateButton(context, ref),
-                            const SizedBox(width: 16),
+                            // _buildTranslateButton(context, ref),
+                            // const SizedBox(width: 16),
                             _buildRecordButton(context, ref),
                             const SizedBox(width: 16),
+                            Platform.isWindows
+                                ? _systemSoundButton(context, ref)
+                                : const SizedBox(height: 0),
+                            Platform.isWindows
+                                ? const SizedBox(height: 12)
+                                : const SizedBox(height: 0),
                             Expanded(child: _buildLayoutPopupWindow()),
                           ],
                         ),
@@ -463,6 +476,25 @@ class InterpretView extends ConsumerWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _systemSoundButton(BuildContext context, WidgetRef ref) {
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Builder(
+        builder: (context) => IconButton(
+          icon: ref.watch(interpretViewModelProvider).isSystemSoundEnabled
+              ? const Icon(Icons.volume_up_outlined, size: 24)
+              : const Icon(Icons.volume_off_outlined, size: 24),
+          onPressed: () {
+            ref.read(interpretViewModelProvider.notifier).toggleSystemSound();
+          },
+          color: Theme.of(context).colorScheme.primary,
+          tooltip: '翻译系统声音',
         ),
       ),
     );
@@ -1069,8 +1101,8 @@ class InterpretView extends ConsumerWidget {
               colors: isRecording
                   ? [Colors.red.withOpacity(0.8), Colors.red.withOpacity(0.6)]
                   : [
-                      Theme.of(context).colorScheme.secondary,
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
                     ],
             ),
             borderRadius: BorderRadius.circular(isMobile ? 12 : 8),
@@ -1078,7 +1110,7 @@ class InterpretView extends ConsumerWidget {
               BoxShadow(
                 color: isRecording
                     ? Colors.red.withOpacity(0.3)
-                    : Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                    : Theme.of(context).colorScheme.primary.withOpacity(0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
