@@ -52,7 +52,10 @@ class InterpretState {
 }
 
 // Provider
-final interpretViewModelProvider = NotifierProvider.autoDispose<InterpretViewModel, InterpretState>(InterpretViewModel.new);
+final interpretViewModelProvider =
+    NotifierProvider.autoDispose<InterpretViewModel, InterpretState>(
+      InterpretViewModel.new,
+    );
 
 class InterpretViewModel extends Notifier<InterpretState> {
   final TranslationService _translationService = TranslationService();
@@ -82,10 +85,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       initialize();
     });
-    
+
     return const InterpretState();
   }
-  
+
   /// 资源释放方法（手动调用）
   void disposeResources() {
     _translationSubscription?.cancel();
@@ -93,8 +96,6 @@ class InterpretViewModel extends Notifier<InterpretState> {
     _recognizedTextSubscription?.cancel();
     _translationService.dispose();
   }
-
-
 
   /// 初始化流监听
   void _initializeStreams() {
@@ -135,10 +136,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
     // 监听错误流
     _errorSubscription = _translationService.errorStream.listen((error) {
-      state = state.copyWith(
-        statusMessage: '错误: $error',
-        isProcessing: false,
-      );
+      state = state.copyWith(statusMessage: '错误: $error', isProcessing: false);
     });
   }
 
@@ -153,15 +151,9 @@ class InterpretViewModel extends Notifier<InterpretState> {
         targetLanguage: targetCode,
       );
 
-      state = state.copyWith(
-        isConnected: true,
-        statusMessage: '已连接到翻译服务',
-      );
+      state = state.copyWith(isConnected: true, statusMessage: '已连接到翻译服务');
     } catch (e) {
-      state = state.copyWith(
-        statusMessage: '连接失败: $e',
-        isConnected: false,
-      );
+      state = state.copyWith(statusMessage: '连接失败: $e', isConnected: false);
     }
   }
 
@@ -185,10 +177,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
       _translationService.sendTextMessage(text);
       // 翻译结果会通过 stream 异步返回
     } catch (e) {
-      state = state.copyWith(
-        statusMessage: '翻译失败: $e',
-        isProcessing: false,
-      );
+      state = state.copyWith(statusMessage: '翻译失败: $e', isProcessing: false);
       debugPrint('翻译错误: $e');
     }
   }
@@ -285,16 +274,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     try {
       final success = await _translationService.startStreaming();
       if (!success) {
-        state = state.copyWith(
-          isProcessing: false,
-          statusMessage: '开始录音失败',
-        );
+        state = state.copyWith(isProcessing: false, statusMessage: '开始录音失败');
       }
     } catch (e) {
-      state = state.copyWith(
-        statusMessage: '录音失败: $e',
-        isProcessing: false,
-      );
+      state = state.copyWith(statusMessage: '录音失败: $e', isProcessing: false);
       debugPrint('录音错误: $e');
     }
   }
@@ -305,14 +288,9 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
     try {
       await _translationService.stopStreaming();
-      state = state.copyWith(
-        isProcessing: false,
-        statusMessage: '录音已停止',
-      );
+      state = state.copyWith(isProcessing: false, statusMessage: '录音已停止');
     } catch (e) {
-      state = state.copyWith(
-        statusMessage: '停止录音失败: $e',
-      );
+      state = state.copyWith(statusMessage: '停止录音失败: $e');
       debugPrint('停止录音错误: $e');
     }
   }
@@ -325,6 +303,4 @@ class InterpretViewModel extends Notifier<InterpretState> {
       await startRecording();
     }
   }
-
 }
-

@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/components/icon/icon_text.dart';
+import 'package:country_icons/country_icons.dart';
 import 'package:aif2f/scene/view/scene_menu.dart';
 import 'package:aif2f/user/view/user_menu.dart';
 import 'package:aif2f/scene/model/scene_model.dart';
@@ -34,6 +35,18 @@ class InterpretView extends ConsumerWidget {
     '德语': 'DE',
     '西班牙语': 'ES',
     '俄语': 'RU',
+  };
+
+  // 语言到国旗图标的映射（使用country_icons包）
+  static final Map<String, String> _languageFlags = {
+    '英语': 'us',
+    '中文': 'cn',
+    '日语': 'jp',
+    '韩语': 'kr',
+    '法语': 'fr',
+    '德语': 'de',
+    '西班牙语': 'es',
+    '俄语': 'ru',
   };
 
   // 语言选择器的全局键
@@ -334,92 +347,95 @@ class InterpretView extends ConsumerWidget {
   }
 
   Widget _buildLanguageSelector(WidgetRef ref, BuildContext context) {
-    return SizedBox(
-      width: 120,
-      child: MouseRegion(
-        key: _languageSelectorKey,
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () => _showLanguageSelector(context, ref),
-          child: Builder(
-            builder: (buttonContext) => AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              decoration: BoxDecoration(
-                border: Border.all(
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: SizedBox(
+        width: 120,
+        child: MouseRegion(
+          key: _languageSelectorKey,
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () => _showLanguageSelector(context, ref),
+            child: Builder(
+              builder: (buttonContext) => AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Theme.of(
+                      buttonContext,
+                    ).colorScheme.primary.withOpacity(0.2),
+                    width: 1.0,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
                   color: Theme.of(
                     buttonContext,
-                  ).colorScheme.primary.withOpacity(0.2),
-                  width: 1.0,
+                  ).colorScheme.primaryContainer.withOpacity(0.3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(12),
-                color: Theme.of(
-                  buttonContext,
-                ).colorScheme.primaryContainer.withOpacity(0.3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              // 确保AnimatedContainer也受到宽度限制
-              constraints: BoxConstraints(maxWidth: 100),
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // 源语言 - 移除Expanded，使用固定宽度
-                  SizedBox(
-                    width: 30,
-                    child: Center(
-                      child: Text(
-                        _languageCodes[ref
-                                .watch(interpretViewModelProvider)
-                                .sourceLanguage] ??
-                            ref
-                                .watch(interpretViewModelProvider)
-                                .sourceLanguage,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(buttonContext).colorScheme.primary,
+                // 确保AnimatedContainer也受到宽度限制
+                constraints: BoxConstraints(maxWidth: 100),
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // 源语言 - 移除Expanded，使用固定宽度
+                    SizedBox(
+                      width: 30,
+                      child: Center(
+                        child: Text(
+                          _languageCodes[ref
+                                  .watch(interpretViewModelProvider)
+                                  .sourceLanguage] ??
+                              ref
+                                  .watch(interpretViewModelProvider)
+                                  .sourceLanguage,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(buttonContext).colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // 翻译方向箭头 - 减小内边距
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    child: Icon(
-                      Icons.compare_arrows_rounded,
-                      color: Theme.of(buttonContext).colorScheme.primary,
-                      size: 14,
+                    // 翻译方向箭头 - 减小内边距
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      child: Icon(
+                        Icons.compare_arrows_rounded,
+                        color: Theme.of(buttonContext).colorScheme.primary,
+                        size: 14,
+                      ),
                     ),
-                  ),
 
-                  // 目标语言 - 移除Expanded，使用固定宽度
-                  SizedBox(
-                    width: 30,
-                    child: Center(
-                      child: Text(
-                        _languageCodes[ref
-                                .watch(interpretViewModelProvider)
-                                .targetLanguage] ??
-                            ref
-                                .watch(interpretViewModelProvider)
-                                .targetLanguage,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(buttonContext).colorScheme.primary,
+                    // 目标语言 - 移除Expanded，使用固定宽度
+                    SizedBox(
+                      width: 30,
+                      child: Center(
+                        child: Text(
+                          _languageCodes[ref
+                                  .watch(interpretViewModelProvider)
+                                  .targetLanguage] ??
+                              ref
+                                  .watch(interpretViewModelProvider)
+                                  .targetLanguage,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(buttonContext).colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -669,81 +685,261 @@ class InterpretView extends ConsumerWidget {
   }
 
   void _showLanguageSelector(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(interpretViewModelProvider);
-    String sourceLanguage = state.sourceLanguage;
-    String targetLanguage = state.targetLanguage;
+    // 获取语言选择器的位置
+    final renderBox =
+        _languageSelectorKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('语言选择'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 源语言选择
-            DropdownButtonFormField<String>(
-              value: sourceLanguage,
-              decoration: const InputDecoration(labelText: '源语言'),
-              items: _languages
-                  .map(
-                    (lang) => DropdownMenuItem(value: lang, child: Text(lang)),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null && value != targetLanguage) {
-                  sourceLanguage = value;
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            // 目标语言选择
-            DropdownButtonFormField<String>(
-              value: targetLanguage,
-              decoration: const InputDecoration(labelText: '目标语言'),
-              items: _languages
-                  .map(
-                    (lang) => DropdownMenuItem(value: lang, child: Text(lang)),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null && value != sourceLanguage) {
-                  targetLanguage = value;
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            // 交换语言按钮
-            ElevatedButton.icon(
-              onPressed: () {
-                final temp = sourceLanguage;
-                sourceLanguage = targetLanguage;
-                targetLanguage = temp;
-                // 重新构建对话框以更新UI
-                Navigator.pop(dialogContext);
-                _showLanguageSelector(context, ref);
-              },
-              icon: const Icon(Icons.swap_horiz),
-              label: const Text('交换语言'),
-            ),
-          ],
+    final overlay = Overlay.of(context);
+    final overlayRenderBox = overlay.context.findRenderObject() as RenderBox;
+    final position = renderBox.localToGlobal(
+      Offset.zero,
+      ancestor: overlayRenderBox,
+    );
+
+    // 创建状态变量
+    String sourceLanguage = ref
+        .watch(interpretViewModelProvider)
+        .sourceLanguage;
+    String targetLanguage = ref
+        .watch(interpretViewModelProvider)
+        .targetLanguage;
+
+    // 使用late关键字延迟初始化overlayEntry
+    late final OverlayEntry overlayEntry;
+
+    // 创建OverlayEntry
+    overlayEntry = OverlayEntry(
+      builder: (overlayContext) => GestureDetector(
+        // 点击外部关闭弹出框
+        onTap: () {
+          overlayEntry.remove();
+        },
+        child: Container(
+          color: Colors.black.withOpacity(0.3),
+          child: Stack(
+            children: [
+              Positioned(
+                left: position.dx,
+                top: position.dy + renderBox.size.height + 8,
+                child: GestureDetector(
+                  // 防止点击内部关闭弹出框
+                  onTap: () {
+                    // 阻止事件冒泡
+                  },
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 290, //增加宽度以确保良好显示
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 标题
+                          const Text(
+                            '语言选择',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 左右两栏布局
+                          Row(
+                            children: [
+                              // 源语言选择（左侧）
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '源语言',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: _languages
+                                          .where(
+                                            (lang) => lang != targetLanguage,
+                                          )
+                                          .map(
+                                            (lang) => ChoiceChip(
+                                              label: Container(
+                                                width: 60, // 固定选项宽度
+                                                child: Row(
+                                                  children: [
+                                                    // 使用country_icons包中的正确路径格式
+                                                    Image.asset(
+                                                      'icons/flags/png100px/${_languageFlags[lang]}.png',
+                                                      package: 'country_icons',
+                                                      width: 16,
+                                                      height: 12,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      _languageCodes[lang] ??
+                                                          lang,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              selected: sourceLanguage == lang,
+                                              onSelected: (selected) {
+                                                if (selected) {
+                                                  // 更新ViewModel中的状态
+                                                  ref
+                                                      .read(
+                                                        interpretViewModelProvider
+                                                            .notifier,
+                                                      )
+                                                      .setLanguages(
+                                                        lang,
+                                                        targetLanguage,
+                                                      );
+                                                  // 重新构建Overlay以更新UI，保持弹出层显示
+                                                  overlayEntry.remove();
+                                                  _showLanguageSelector(
+                                                    context,
+                                                    ref,
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                          )
+                                          .toList(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // 交换语言按钮（中间）
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    IconButton(
+                                      onPressed: () {
+                                        // 调用ViewModel的交换语言方法
+                                        ref
+                                            .read(
+                                              interpretViewModelProvider
+                                                  .notifier,
+                                            )
+                                            .swapLanguages();
+                                        // 重新构建Overlay以更新UI，保持弹出层显示
+                                        overlayEntry.remove();
+                                        _showLanguageSelector(context, ref);
+                                      },
+                                      icon: const Icon(Icons.swap_horiz),
+                                      tooltip: '交换语言',
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // 目标语言选择（右侧）
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '目标语言',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: _languages
+                                          .where(
+                                            (lang) => lang != sourceLanguage,
+                                          )
+                                          .map(
+                                            (lang) => ChoiceChip(
+                                              label: Container(
+                                                width: 60, // 固定选项宽度
+                                                child: Row(
+                                                  children: [
+                                                    // 使用country_icons包中的正确路径格式
+                                                    Image.asset(
+                                                      'icons/flags/png100px/${_languageFlags[lang]}.png',
+                                                      package: 'country_icons',
+                                                      width: 16,
+                                                      height: 12,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      _languageCodes[lang] ??
+                                                          lang,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              selected: targetLanguage == lang,
+                                              onSelected: (selected) {
+                                                if (selected) {
+                                                  // 更新ViewModel中的状态
+                                                  ref
+                                                      .read(
+                                                        interpretViewModelProvider
+                                                            .notifier,
+                                                      )
+                                                      .setLanguages(
+                                                        sourceLanguage,
+                                                        lang,
+                                                      );
+                                                  // 重新构建Overlay以更新UI，保持弹出层显示
+                                                  overlayEntry.remove();
+                                                  _showLanguageSelector(
+                                                    context,
+                                                    ref,
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                          )
+                                          .toList(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              ref
-                  .read(interpretViewModelProvider.notifier)
-                  .setLanguages(sourceLanguage, targetLanguage);
-            },
-            child: const Text('确定'),
-          ),
-        ],
       ),
     );
+
+    // 插入OverlayEntry
+    overlay.insert(overlayEntry);
   }
 
   void _swapLanguages(WidgetRef ref) {
