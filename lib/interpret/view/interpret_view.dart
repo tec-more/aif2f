@@ -142,10 +142,16 @@ class InterpretView extends ConsumerWidget {
               SizedBox(
                 height: MediaQuery.of(context).size.width < 600 ? 16 : 24,
               ),
-              _buildOneColumnLayout(context, ref),
+              Row(
+                children: [
+                  Expanded(child: _buildOneColumnLayout(context, ref)),
+                  SizedBox(width: 12),
+                  if (ref.watch(interpretViewModelProvider).panelNumber == 2)
+                    Expanded(child: _buildTwoColumnLayout(context, ref)),
+                ],
+              ),
+
               // debugPrint('panelNumber: ${ref.watch(interpretViewModelProvider).panelNumber}');
-              if (ref.watch(interpretViewModelProvider).panelNumber == 2)
-                _buildTwoColumnLayout(context, ref),
             ],
           ),
         ),
@@ -458,26 +464,28 @@ class InterpretView extends ConsumerWidget {
                                     splashRadius: 20,
                                   ),
                                   const SizedBox(width: 12),
-                                  IconButton(
-                                    onPressed: () {
-                                      // 双面板
-                                      ref
-                                          .read(
-                                            interpretViewModelProvider.notifier,
-                                          )
-                                          .setPanelNumber(2);
-                                    },
-                                    icon: const TwoPanelsIcon(),
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Colors.grey[200],
+                                  if (Platform.isWindows)
+                                    IconButton(
+                                      onPressed: () {
+                                        // 双面板
+                                        ref
+                                            .read(
+                                              interpretViewModelProvider
+                                                  .notifier,
+                                            )
+                                            .setPanelNumber(2);
+                                      },
+                                      icon: const TwoPanelsIcon(),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.grey[200],
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      constraints: const BoxConstraints(),
+                                      splashRadius: 20,
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    constraints: const BoxConstraints(),
-                                    splashRadius: 20,
-                                  ),
                                 ],
                               ),
                             ],
