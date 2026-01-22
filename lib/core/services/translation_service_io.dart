@@ -20,8 +20,11 @@ class TranslationService {
   bool _isConnected = false;
 
   // 语言配置字段
-  String _sourceLanguage = 'zh';
-  String _targetLanguage = 'en';
+  String _sourceOneLanguage = 'zh';
+  String _targetOneLanguage = 'en';
+  // 语言配置字段
+  String _sourceTwoLanguage = 'zh';
+  String _targetTwoLanguage = 'en';
 
   // 保存 WebSocket 流订阅，防止被垃圾回收
   StreamSubscription? _wsStreamSubscription;
@@ -51,8 +54,8 @@ class TranslationService {
         headers: {'Authorization': 'Bearer $apiKey'},
       );
 
-      _sourceLanguage = sourceLanguage;
-      _targetLanguage = targetLanguage;
+      _sourceOneLanguage = sourceLanguage;
+      _targetOneLanguage = targetLanguage;
 
       _listenToServer();
 
@@ -217,9 +220,9 @@ class TranslationService {
   }
 
   /// 更新翻译语言
-  void updateLanguages(String sourceLanguage, String targetLanguage) {
-    _sourceLanguage = sourceLanguage;
-    _targetLanguage = targetLanguage;
+  void updateLanguages(String sourceLanguage, String targetLanguage, int type) {
+    _sourceOneLanguage = sourceLanguage;
+    _targetOneLanguage = targetLanguage;
     debugPrint('已更新语言配置: $sourceLanguage -> $targetLanguage');
   }
 
