@@ -668,9 +668,14 @@ class InterpretView extends ConsumerWidget {
             // 开启系统声音时候，默认使用2栏
             if (ref.watch(interpretViewModelProvider).isSystemSoundEnabled) {
               ref.read(interpretViewModelProvider.notifier).setPanelNumber(1);
+              debugPrint('系统声音按钮点击开始');
+              ref.read(interpretViewModelProvider.notifier).startSystemSound();
             } else {
               ref.read(interpretViewModelProvider.notifier).setPanelNumber(2);
+              debugPrint('系统声音按钮点击结束');
+              ref.read(interpretViewModelProvider.notifier).stopSystemSound();
             }
+
             // 开启系统音频流，发送到大模型进行asr,返回值设置为源语言；
             // 把源语言发送到大模型进行翻译，返回值设置为目标语言；
             // 如果系统开启了系统音频流，则源语言和目标语言，显示在第一栏中，录音流显示在第二栏中；
