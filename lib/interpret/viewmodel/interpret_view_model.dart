@@ -34,7 +34,7 @@ class InterpretState {
     this.isSystemSoundEnabled = false,
     this.onefontSize = 14,
     this.twofontSize = 14,
-    this.panelNumber = 1,
+    this.panelNumber = 2, // 默认显示第二栏(录音) , 1 显示第一栏(系统音频)
     //o2o 只显示源语言，s2s 只显示目标语言，o2s 显示源语言和目标语言，l2l 源语言和目标语言分离
     this.oneContentTypes = 'o2s',
     //o2o 只显示源语言，s2s 只显示目标语言，o2s 显示源语言和目标语言，l2l 源语言和目标语言分离
@@ -44,8 +44,8 @@ class InterpretState {
     this.translatedOneText = '',
     this.inputTwoText = '',
     this.translatedTwoText = '',
-    this.sourceOneLanguage = '英语',
-    this.targetOneLanguage = '中文',
+    this.sourceOneLanguage = '中文',
+    this.targetOneLanguage = '英语',
     this.sourceTwoLanguage = '英语',
     this.targetTwoLanguage = '中文',
   });

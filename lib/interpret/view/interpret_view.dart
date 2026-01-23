@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/components/icon/icon_text.dart';
 import 'package:country_icons/country_icons.dart';
@@ -144,10 +145,11 @@ class InterpretView extends ConsumerWidget {
               ),
               Row(
                 children: [
-                  Expanded(child: _buildOneColumnLayout(context, ref)),
-                  SizedBox(width: 12),
-                  if (ref.watch(interpretViewModelProvider).panelNumber == 2)
-                    Expanded(child: _buildTwoColumnLayout(context, ref)),
+                  if (ref.watch(interpretViewModelProvider).panelNumber == 1)
+                    Expanded(child: _buildOneColumnLayout(context, ref)),
+                  if (ref.watch(interpretViewModelProvider).panelNumber == 1)
+                    SizedBox(width: 12),
+                  Expanded(child: _buildTwoColumnLayout(context, ref)),
                 ],
               ),
 
@@ -435,7 +437,7 @@ class InterpretView extends ConsumerWidget {
                                           .read(
                                             interpretViewModelProvider.notifier,
                                           )
-                                          .setPanelNumber(1);
+                                          .setPanelNumber(2);
                                       Navigator.pop(context);
                                     },
                                     icon: const Icon(
@@ -458,7 +460,7 @@ class InterpretView extends ConsumerWidget {
                                               interpretViewModelProvider
                                                   .notifier,
                                             )
-                                            .setPanelNumber(2);
+                                            .setPanelNumber(1);
                                         Navigator.pop(context);
                                       },
                                       icon: const TwoPanelsIcon(),
@@ -629,10 +631,14 @@ class InterpretView extends ConsumerWidget {
             ref.read(interpretViewModelProvider.notifier).toggleSystemSound();
             // 开启系统声音时候，默认使用2栏
             if (ref.watch(interpretViewModelProvider).isSystemSoundEnabled) {
-              ref.read(interpretViewModelProvider.notifier).setPanelNumber(2);
-            } else {
               ref.read(interpretViewModelProvider.notifier).setPanelNumber(1);
+            } else {
+              ref.read(interpretViewModelProvider.notifier).setPanelNumber(2);
             }
+            // 开启系统音频流，发送到大模型进行asr,返回值设置为源语言；
+            // 把源语言发送到大模型进行翻译，返回值设置为目标语言；
+            // 如果系统开启了系统音频流，则源语言和目标语言，显示在第一栏中，录音流显示在第二栏中；
+            // 如果系统没有开启系统音频流，则只能是录音流，录音流中的源语言和目标语言，显示在第一栏中；
           },
           color: Theme.of(context).colorScheme.primary,
           tooltip: '翻译系统声音',
