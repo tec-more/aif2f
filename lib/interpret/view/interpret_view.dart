@@ -1144,7 +1144,7 @@ class InterpretView extends ConsumerWidget {
   /// 一栏文本框
   Widget _buildOneColumnLayout(BuildContext context, WidgetRef ref) {
     final state = ref.watch(interpretViewModelProvider);
-    debugPrint('panelNumber: ${state.panelNumber}');
+    // debugPrint('panelNumber: ${state.panelNumber}');
     return Column(
       children: [
         // 语言选择卡片
@@ -1180,7 +1180,7 @@ class InterpretView extends ConsumerWidget {
   /// 二栏文本框
   Widget _buildTwoColumnLayout(BuildContext context, WidgetRef ref) {
     final state = ref.watch(interpretViewModelProvider);
-    debugPrint('panelNumber: ${state.panelNumber}');
+    // debugPrint('panelNumber: ${state.panelNumber}');
     return Column(
       children: [
         // 语言选择卡片
