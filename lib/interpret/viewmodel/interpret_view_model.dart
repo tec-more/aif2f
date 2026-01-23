@@ -394,6 +394,18 @@ class InterpretViewModel extends Notifier<InterpretState> {
     }
   }
 
+  /// 设置文本布局类型
+  /// 1 - 单行文本
+
+  void setOneContentTypes(String srcContentTypes) {
+    state = state.copyWith(oneContentTypes: srcContentTypes);
+  }
+
+  /// 2 - 多行文本
+  void setTwoContentTypes(String twoContentTypes) {
+    state = state.copyWith(twoContentTypes: twoContentTypes);
+  }
+
   /// 切换系统声音状态
   void toggleSystemSound() {
     state = state.copyWith(isSystemSoundEnabled: !state.isSystemSoundEnabled);

@@ -325,7 +325,11 @@ class InterpretView extends ConsumerWidget {
   }
 
   /// 布局弹出窗口
-  Widget _buildLayoutPopupWindow(BuildContext context, WidgetRef ref) {
+  Widget _buildLayoutPopupWindow(
+    BuildContext context,
+    WidgetRef ref, [
+    int type = 1,
+  ]) {
     return Container(
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -509,6 +513,19 @@ class InterpretView extends ConsumerWidget {
                                   IconButton(
                                     onPressed: () {
                                       // 文本布局1 - 单行文本
+                                      type == 1
+                                          ? ref
+                                                .read(
+                                                  interpretViewModelProvider
+                                                      .notifier,
+                                                )
+                                                .setOneContentTypes('o2o')
+                                          : ref
+                                                .read(
+                                                  interpretViewModelProvider
+                                                      .notifier,
+                                                )
+                                                .setTwoContentTypes('o2o');
                                     },
                                     icon: const TextLayout1Icon(),
                                     padding: const EdgeInsets.symmetric(
@@ -522,6 +539,19 @@ class InterpretView extends ConsumerWidget {
                                   IconButton(
                                     onPressed: () {
                                       // 文本布局2 - 两行文本
+                                      type == 1
+                                          ? ref
+                                                .read(
+                                                  interpretViewModelProvider
+                                                      .notifier,
+                                                )
+                                                .setOneContentTypes('s2s')
+                                          : ref
+                                                .read(
+                                                  interpretViewModelProvider
+                                                      .notifier,
+                                                )
+                                                .setTwoContentTypes('s2s');
                                     },
                                     icon: const TextLayout2Icon(),
                                     padding: const EdgeInsets.symmetric(
@@ -535,6 +565,19 @@ class InterpretView extends ConsumerWidget {
                                   IconButton(
                                     onPressed: () {
                                       // 文本布局3 - 三行文本
+                                      type == 1
+                                          ? ref
+                                                .read(
+                                                  interpretViewModelProvider
+                                                      .notifier,
+                                                )
+                                                .setOneContentTypes('o2s')
+                                          : ref
+                                                .read(
+                                                  interpretViewModelProvider
+                                                      .notifier,
+                                                )
+                                                .setTwoContentTypes('o2s');
                                     },
                                     icon: const TextLayout3Icon(),
                                     padding: const EdgeInsets.symmetric(
@@ -548,6 +591,19 @@ class InterpretView extends ConsumerWidget {
                                   IconButton(
                                     onPressed: () {
                                       // 文本布局4 - 列表视图
+                                      type == 1
+                                          ? ref
+                                                .read(
+                                                  interpretViewModelProvider
+                                                      .notifier,
+                                                )
+                                                .setOneContentTypes('t2t')
+                                          : ref
+                                                .read(
+                                                  interpretViewModelProvider
+                                                      .notifier,
+                                                )
+                                                .setTwoContentTypes('t2t');
                                     },
                                     icon: const TextLayout4Icon(),
                                     padding: const EdgeInsets.symmetric(
@@ -669,14 +725,17 @@ class InterpretView extends ConsumerWidget {
                 const SizedBox(width: 16),
                 // _buildTranslateButton(context, ref),
                 // const SizedBox(width: 16),
-                Expanded(child: _buildLayoutPopupWindow(context, ref)),
+                Expanded(child: _buildLayoutPopupWindow(context, ref, 1)),
               ],
             ),
           ),
         ),
         SizedBox(height: MediaQuery.of(context).size.width < 600 ? 16 : 24),
         // 文本输入/输出卡片
-        _buildF2fTextField(context, ref, 1),
+        if (state.oneContentTypes == 'o2o') _buildO2OTextField(context, ref, 1),
+        if (state.oneContentTypes == 's2s') _buildS2STextField(context, ref, 1),
+        if (state.oneContentTypes == 'o2s') _buildO2STextField(context, ref, 1),
+        if (state.oneContentTypes == 't2t') _buildF2fTextField(context, ref, 1),
       ],
     );
   }
@@ -688,7 +747,78 @@ class InterpretView extends ConsumerWidget {
     int type = 1,
   ]) {
     final state = ref.watch(interpretViewModelProvider);
-    return Card(child: SizedBox(child: Text(state.inputOneText)));
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: SizedBox(
+        height:
+            MediaQuery.of(context).size.height *
+            (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.6),
+        child: Column(
+          children: [
+            // 源语言输入区
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width < 600 ? 12 : 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller:
+                            TextEditingController(
+                                text: type == 1
+                                    ? state.inputOneText
+                                    : state.inputTwoText,
+                              )
+                              ..selection = TextSelection.fromPosition(
+                                TextPosition(
+                                  offset: type == 1
+                                      ? state.inputOneText.length
+                                      : state.inputTwoText.length,
+                                ),
+                              ),
+                        onChanged: (text) {
+                          ref
+                              .read(interpretViewModelProvider.notifier)
+                              .setInputText(text, type);
+                        },
+                        onSubmitted: (text) {
+                          ref
+                              .read(interpretViewModelProvider.notifier)
+                              .translateText(text, type);
+                        },
+                        maxLines: null,
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: InputDecoration(
+                          hintText: '源语言',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          hintStyle: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 14
+                                : 16,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontSize: MediaQuery.of(context).size.width < 600
+                              ? 12
+                              : 16,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 构建S2S文本框/输入卡片
@@ -698,7 +828,78 @@ class InterpretView extends ConsumerWidget {
     int type = 1,
   ]) {
     final state = ref.watch(interpretViewModelProvider);
-    return Card(child: SizedBox(child: Text(state.inputOneText)));
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: SizedBox(
+        height:
+            MediaQuery.of(context).size.height *
+            (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.6),
+        child: Column(
+          children: [
+            // 源语言输入区
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width < 600 ? 12 : 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller:
+                            TextEditingController(
+                                text: type == 1
+                                    ? state.inputOneText
+                                    : state.inputTwoText,
+                              )
+                              ..selection = TextSelection.fromPosition(
+                                TextPosition(
+                                  offset: type == 1
+                                      ? state.inputOneText.length
+                                      : state.inputTwoText.length,
+                                ),
+                              ),
+                        onChanged: (text) {
+                          ref
+                              .read(interpretViewModelProvider.notifier)
+                              .setInputText(text, type);
+                        },
+                        onSubmitted: (text) {
+                          ref
+                              .read(interpretViewModelProvider.notifier)
+                              .translateText(text, type);
+                        },
+                        maxLines: null,
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: InputDecoration(
+                          hintText: '目标语言',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          hintStyle: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 14
+                                : 16,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontSize: MediaQuery.of(context).size.width < 600
+                              ? 12
+                              : 16,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 构建O2S文本框/输入卡片
@@ -708,7 +909,78 @@ class InterpretView extends ConsumerWidget {
     int type = 1,
   ]) {
     final state = ref.watch(interpretViewModelProvider);
-    return Card(child: SizedBox(child: Text(state.inputOneText)));
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: SizedBox(
+        height:
+            MediaQuery.of(context).size.height *
+            (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.6),
+        child: Column(
+          children: [
+            // 源语言输入区
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width < 600 ? 12 : 24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller:
+                            TextEditingController(
+                                text: type == 1
+                                    ? state.inputOneText
+                                    : state.inputTwoText,
+                              )
+                              ..selection = TextSelection.fromPosition(
+                                TextPosition(
+                                  offset: type == 1
+                                      ? state.inputOneText.length
+                                      : state.inputTwoText.length,
+                                ),
+                              ),
+                        onChanged: (text) {
+                          ref
+                              .read(interpretViewModelProvider.notifier)
+                              .setInputText(text, type);
+                        },
+                        onSubmitted: (text) {
+                          ref
+                              .read(interpretViewModelProvider.notifier)
+                              .translateText(text, type);
+                        },
+                        maxLines: null,
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: InputDecoration(
+                          hintText: '源语言/目标语言',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          hintStyle: TextStyle(
+                            fontSize: MediaQuery.of(context).size.width < 600
+                                ? 14
+                                : 16,
+                          ),
+                        ),
+                        style: TextStyle(
+                          fontSize: MediaQuery.of(context).size.width < 600
+                              ? 12
+                              : 16,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 构建F2F文本输入/输出卡片
@@ -724,7 +996,7 @@ class InterpretView extends ConsumerWidget {
       child: SizedBox(
         height:
             MediaQuery.of(context).size.height *
-            (MediaQuery.of(context).size.width < 600 ? 0.65 : 0.65),
+            (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.6),
         child: Column(
           children: [
             // 源语言输入区
@@ -871,14 +1143,17 @@ class InterpretView extends ConsumerWidget {
                 const SizedBox(width: 16),
                 // _buildTranslateButton(context, ref),
                 // const SizedBox(width: 16),
-                Expanded(child: _buildLayoutPopupWindow(context, ref)),
+                Expanded(child: _buildLayoutPopupWindow(context, ref, 2)),
               ],
             ),
           ),
         ),
         SizedBox(height: MediaQuery.of(context).size.width < 600 ? 16 : 24),
         // 文本输入/输出卡片
-        _buildF2fTextField(context, ref, 2),
+        if (state.twoContentTypes == 'o2o') _buildO2OTextField(context, ref, 2),
+        if (state.twoContentTypes == 's2s') _buildS2STextField(context, ref, 2),
+        if (state.twoContentTypes == 'o2s') _buildO2STextField(context, ref, 2),
+        if (state.twoContentTypes == 't2t') _buildF2fTextField(context, ref, 2),
       ],
     );
   }
