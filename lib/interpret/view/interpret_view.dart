@@ -60,11 +60,6 @@ class InterpretView extends ConsumerWidget {
     final state = ref.watch(interpretViewModelProvider);
 
     // 初始化翻译服务 - 仅当未连接时初始化
-    if (!state.isConnected) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(interpretViewModelProvider.notifier).initialize();
-      });
-    }
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
