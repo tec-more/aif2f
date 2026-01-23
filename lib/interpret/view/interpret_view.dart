@@ -456,6 +456,7 @@ class InterpretView extends ConsumerWidget {
                                             interpretViewModelProvider.notifier,
                                           )
                                           .setPanelNumber(1);
+                                      Navigator.pop(context);
                                     },
                                     icon: const Icon(
                                       Icons.crop_portrait_rounded,
@@ -478,6 +479,7 @@ class InterpretView extends ConsumerWidget {
                                                   .notifier,
                                             )
                                             .setPanelNumber(2);
+                                        Navigator.pop(context);
                                       },
                                       icon: const TwoPanelsIcon(),
                                       style: IconButton.styleFrom(

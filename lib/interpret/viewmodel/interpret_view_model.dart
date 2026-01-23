@@ -36,9 +36,9 @@ class InterpretState {
     this.twofontSize = 14,
     this.panelNumber = 1,
     //o2o 只显示源语言，s2s 只显示目标语言，o2s 显示源语言和目标语言，l2l 源语言和目标语言分离
-    this.oneContentTypes = 'o2o',
+    this.oneContentTypes = 'o2s',
     //o2o 只显示源语言，s2s 只显示目标语言，o2s 显示源语言和目标语言，l2l 源语言和目标语言分离
-    this.twoContentTypes = 'o2o',
+    this.twoContentTypes = 'o2s',
     this.statusMessage = '',
     this.inputOneText = '',
     this.translatedOneText = '',
