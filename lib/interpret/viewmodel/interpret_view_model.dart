@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/interpret/model/interpret_model.dart';
 import 'package:aif2f/core/services/translation_service.dart';
@@ -100,13 +101,6 @@ final interpretViewModelProvider =
     );
 
 class InterpretViewModel extends Notifier<InterpretState> {
-  final TranslationService _translationService = TranslationService();
-
-  // 流订阅
-  StreamSubscription<String>? _translationSubscription;
-  StreamSubscription<String>? _errorSubscription;
-  StreamSubscription<String>? _recognizedTextSubscription;
-
   // 语言代码映射
   final Map<String, String> _languageCodeMap = {
     '英语': 'en',
@@ -122,81 +116,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
   @override
   InterpretState build() {
     // 初始化状态
-    _initializeStreams();
-    // 在build方法中初始化翻译服务
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      initialize();
-    });
-
     return const InterpretState();
-  }
-
-  /// 资源释放方法（手动调用）
-  void disposeResources() {
-    _translationSubscription?.cancel();
-    _errorSubscription?.cancel();
-    _recognizedTextSubscription?.cancel();
-    _translationService.dispose();
-  }
-
-  /// 初始化流监听
-  void _initializeStreams() {
-    // 监听翻译结果流
-    _translationSubscription = _translationService.translationStream.listen(
-      (delta) {
-        final newTranslatedText = '${state.translatedOneText}$delta';
-        final newTranslation = TranslationResult(
-          sourceText: state.inputOneText,
-          targetText: newTranslatedText,
-          sourceLanguage: state.sourceOneLanguage,
-          targetLanguage: state.sourceOneLanguage,
-        );
-        state = state.copyWith(
-          translatedOneText: newTranslatedText,
-          currentTranslation: newTranslation,
-        );
-      },
-      onError: (error) {
-        debugPrint('翻译流错误: $error');
-        state = state.copyWith(
-          statusMessage: '翻译错误: $error',
-          isProcessing: false,
-        );
-      },
-    );
-
-    // 监听识别文本流
-    _recognizedTextSubscription = _translationService.recognizedTextStream
-        .listen(
-          (transcript) {
-            state = state.copyWith(inputOneText: transcript);
-          },
-          onError: (error) {
-            debugPrint('识别文本流错误: $error');
-          },
-        );
-
-    // 监听错误流
-    _errorSubscription = _translationService.errorStream.listen((error) {
-      state = state.copyWith(statusMessage: '错误: $error', isProcessing: false);
-    });
-  }
-
-  /// 初始化并连接到翻译服务
-  Future<void> initialize() async {
-    try {
-      final sourceCode = _languageCodeMap[state.sourceOneLanguage] ?? 'zh';
-      final targetCode = _languageCodeMap[state.sourceOneLanguage] ?? 'en';
-
-      await _translationService.initAndConnect(
-        sourceLanguage: sourceCode,
-        targetLanguage: targetCode,
-      );
-
-      state = state.copyWith(isConnected: true, statusMessage: '已连接到翻译服务');
-    } catch (e) {
-      state = state.copyWith(statusMessage: '连接失败: $e', isConnected: false);
-    }
   }
 
   /// 设置输入文本
@@ -229,7 +149,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
     }
 
     try {
-      _translationService.sendTextMessage(text);
+      // _translationService.sendTextMessage(text);
       // 翻译结果会通过 stream 异步返回
     } catch (e) {
       state = state.copyWith(statusMessage: '翻译失败: $e', isProcessing: false);
@@ -270,13 +190,6 @@ class InterpretViewModel extends Notifier<InterpretState> {
       setTwoSourceLanguage(sourceLanguage);
       setTwoTargetLanguage(targetLanguage);
     }
-
-    // 更新翻译服务的语言配置
-    if (state.isConnected) {
-      final sourceCode = _languageCodeMap[sourceLanguage] ?? 'zh';
-      final targetCode = _languageCodeMap[targetLanguage] ?? 'en';
-      _translationService.updateLanguages(sourceCode, targetCode, type);
-    }
   }
 
   /// 切换语言
@@ -313,13 +226,6 @@ class InterpretViewModel extends Notifier<InterpretState> {
       inputOneText: newInputOneText,
       translatedOneText: newTranslatedOneText,
     );
-
-    // 更新翻译服务的语言配置
-    if (state.isConnected) {
-      final sourceCode = _languageCodeMap[newSourceLanguage] ?? 'zh';
-      final targetCode = _languageCodeMap[newTargetLanguage] ?? 'en';
-      _translationService.updateLanguages(sourceCode, targetCode, type);
-    }
 
     // 更新翻译结果
     final newTranslation = TranslationResult(
@@ -362,10 +268,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     );
 
     try {
-      final success = await _translationService.startStreaming();
-      if (!success) {
-        state = state.copyWith(isProcessing: false, statusMessage: '开始录音失败');
-      }
+      // final success = await _translationService.startStreaming();
+      // if (!success) {
+      //   state = state.copyWith(isProcessing: false, statusMessage: '开始录音失败');
+      // }
     } catch (e) {
       state = state.copyWith(statusMessage: '录音失败: $e', isProcessing: false);
       debugPrint('录音错误: $e');
@@ -377,7 +283,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
     if (!state.isProcessing) return;
 
     try {
-      await _translationService.stopStreaming();
+      // await _translationService.stopStreaming();
       state = state.copyWith(isProcessing: false, statusMessage: '录音已停止');
     } catch (e) {
       state = state.copyWith(statusMessage: '停止录音失败: $e');
