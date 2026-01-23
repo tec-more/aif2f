@@ -382,6 +382,27 @@ class InterpretView extends ConsumerWidget {
                                   IconButton(
                                     onPressed: () {
                                       // 减小字号
+                                      final state = ref.watch(
+                                        interpretViewModelProvider,
+                                      );
+                                      final fontSize = type == 1
+                                          ? state.onefontSize
+                                          : state.twofontSize;
+                                      if (fontSize > 10) {
+                                        type == 1
+                                            ? ref
+                                                  .read(
+                                                    interpretViewModelProvider
+                                                        .notifier,
+                                                  )
+                                                  .setOnefontSize(fontSize - 1)
+                                            : ref
+                                                  .read(
+                                                    interpretViewModelProvider
+                                                        .notifier,
+                                                  )
+                                                  .setTwofontSize(fontSize - 1);
+                                      }
                                     },
                                     icon: const Text(
                                       'A-',
@@ -398,6 +419,27 @@ class InterpretView extends ConsumerWidget {
                                   IconButton(
                                     onPressed: () {
                                       // 增大字号
+                                      final state = ref.watch(
+                                        interpretViewModelProvider,
+                                      );
+                                      final fontSize = type == 1
+                                          ? state.onefontSize
+                                          : state.twofontSize;
+                                      if (fontSize < 24) {
+                                        type == 1
+                                            ? ref
+                                                  .read(
+                                                    interpretViewModelProvider
+                                                        .notifier,
+                                                  )
+                                                  .setOnefontSize(fontSize + 1)
+                                            : ref
+                                                  .read(
+                                                    interpretViewModelProvider
+                                                        .notifier,
+                                                  )
+                                                  .setTwofontSize(fontSize + 1);
+                                      }
                                     },
                                     icon: const Text(
                                       'A+',
@@ -780,15 +822,15 @@ class InterpretView extends ConsumerWidget {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                           hintStyle: TextStyle(
-                            fontSize: MediaQuery.of(context).size.width < 600
-                                ? 14
-                                : 16,
+                            fontSize: type == 1
+                                ? state.onefontSize
+                                : state.twofontSize,
                           ),
                         ),
                         style: TextStyle(
-                          fontSize: MediaQuery.of(context).size.width < 600
-                              ? 12
-                              : 16,
+                          fontSize: type == 1
+                              ? state.onefontSize
+                              : state.twofontSize,
                           color: Colors.black87,
                           height: 1.5,
                         ),
@@ -861,15 +903,15 @@ class InterpretView extends ConsumerWidget {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                           hintStyle: TextStyle(
-                            fontSize: MediaQuery.of(context).size.width < 600
-                                ? 14
-                                : 16,
+                            fontSize: type == 1
+                                ? state.onefontSize
+                                : state.twofontSize,
                           ),
                         ),
                         style: TextStyle(
-                          fontSize: MediaQuery.of(context).size.width < 600
-                              ? 12
-                              : 16,
+                          fontSize: type == 1
+                              ? state.onefontSize
+                              : state.twofontSize,
                           color: Colors.black87,
                           height: 1.5,
                         ),
@@ -942,15 +984,15 @@ class InterpretView extends ConsumerWidget {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                           hintStyle: TextStyle(
-                            fontSize: MediaQuery.of(context).size.width < 600
-                                ? 14
-                                : 16,
+                            fontSize: type == 1
+                                ? state.onefontSize
+                                : state.twofontSize,
                           ),
                         ),
                         style: TextStyle(
-                          fontSize: MediaQuery.of(context).size.width < 600
-                              ? 12
-                              : 16,
+                          fontSize: type == 1
+                              ? state.onefontSize
+                              : state.twofontSize,
                           color: Colors.black87,
                           height: 1.5,
                         ),
@@ -1023,15 +1065,15 @@ class InterpretView extends ConsumerWidget {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                           hintStyle: TextStyle(
-                            fontSize: MediaQuery.of(context).size.width < 600
-                                ? 14
-                                : 16,
+                            fontSize: type == 1
+                                ? state.onefontSize
+                                : state.twofontSize,
                           ),
                         ),
                         style: TextStyle(
-                          fontSize: MediaQuery.of(context).size.width < 600
-                              ? 12
-                              : 16,
+                          fontSize: type == 1
+                              ? state.onefontSize
+                              : state.twofontSize,
                           color: Colors.black87,
                           height: 1.5,
                         ),

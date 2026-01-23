@@ -12,8 +12,8 @@ class InterpretState {
   final bool isProcessing;
   final bool isConnected;
   final bool isSystemSoundEnabled;
-  final int onefontSize;
-  final int twofontSize;
+  final double onefontSize;
+  final double twofontSize;
   final int panelNumber;
   final String oneContentTypes;
   final String twoContentTypes;
@@ -55,8 +55,8 @@ class InterpretState {
     bool? isProcessing,
     bool? isConnected,
     bool? isSystemSoundEnabled,
-    int? onefontSize,
-    int? twofontSize,
+    double? onefontSize,
+    double? twofontSize,
     int? panelNumber,
     String? oneContentTypes,
     String? twoContentTypes,
@@ -423,11 +423,11 @@ class InterpretViewModel extends Notifier<InterpretState> {
     state = state.copyWith(panelNumber: panelNumber);
   }
 
-  void setSrcfontSize(int srcfontSize) {
-    state = state.copyWith(onefontSize: srcfontSize);
+  void setOnefontSize(double onefontSize) {
+    state = state.copyWith(onefontSize: onefontSize);
   }
 
-  void setTartgetfontSize(int tartgetfontSize) {
-    state = state.copyWith(twofontSize: tartgetfontSize);
+  void setTwofontSize(double twofontSize) {
+    state = state.copyWith(twofontSize: twofontSize);
   }
 }
