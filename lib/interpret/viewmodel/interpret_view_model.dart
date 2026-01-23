@@ -7,6 +7,7 @@ import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/interpret/model/interpret_model.dart';
 import 'package:aif2f/core/services/translation_service.dart';
+import 'package:path/path.dart' as path;
 
 // 状态类
 @immutable
@@ -299,9 +300,22 @@ class InterpretViewModel extends Notifier<InterpretState> {
       await systemSoundCaptureStreamSubscription?.cancel();
       await _audioFileSink?.close();
 
-      // 创建音频文件
-      _audioFile = File('a.wav');
+      // 取当前时间作为声音文件名称（移除冒号以兼容 Windows）
+      final timestamp = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .replaceAll('.', '_');
+      final fileName = 'system_sound_$timestamp.wav';
+
+      // 文件保存路径为当前程序根目录的 sound 文件目录
+      final soundDir = await _getAudioSaveDirectory();
+      if (!await soundDir.exists()) {
+        await soundDir.create(recursive: true);
+      }
+      _audioFile = File(path.join(soundDir.path, fileName));
       _audioFileSink = _audioFile!.openWrite();
+
+      debugPrint('音频文件保存路径: ${_audioFile!.path}');
 
       // 写入 WAV 文件头
       // 注意：这里需要根据实际捕获的音频格式调整参数
@@ -718,5 +732,11 @@ class InterpretViewModel extends Notifier<InterpretState> {
   void setAudioFormat(bool usePcm16) {
     _outputAsPcm16 = usePcm16;
     debugPrint('音频输出格式已设置为: ${usePcm16 ? "16-bit PCM" : "32-bit Float"}');
+  }
+
+  /// 获取音频文件保存目录（跨平台）
+  Future<Directory> _getAudioSaveDirectory() async {
+    // 所有平台统一使用应用程序当前目录下的 sounds 文件夹
+    return Directory(path.join(Directory.current.path, 'sounds'));
   }
 }
