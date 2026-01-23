@@ -304,26 +304,6 @@ class InterpretView extends ConsumerWidget {
     );
   }
 
-  /// 系统声音按钮
-  Widget _systemSoundButton(BuildContext context, WidgetRef ref) {
-    return Container(
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Builder(
-        builder: (context) => IconButton(
-          icon: ref.watch(interpretViewModelProvider).isSystemSoundEnabled
-              ? const Icon(Icons.volume_up_outlined, size: 24)
-              : const Icon(Icons.volume_off_outlined, size: 24),
-          onPressed: () {
-            ref.read(interpretViewModelProvider.notifier).toggleSystemSound();
-          },
-          color: Theme.of(context).colorScheme.primary,
-          tooltip: '翻译系统声音',
-        ),
-      ),
-    );
-  }
-
   /// 布局弹出窗口
   Widget _buildLayoutPopupWindow(
     BuildContext context,
@@ -635,6 +615,32 @@ class InterpretView extends ConsumerWidget {
     );
   }
 
+  /// 系统声音按钮
+  Widget _systemSoundButton(BuildContext context, WidgetRef ref) {
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Builder(
+        builder: (context) => IconButton(
+          icon: ref.watch(interpretViewModelProvider).isSystemSoundEnabled
+              ? const Icon(Icons.volume_up_outlined, size: 24)
+              : const Icon(Icons.volume_off_outlined, size: 24),
+          onPressed: () {
+            ref.read(interpretViewModelProvider.notifier).toggleSystemSound();
+            // 开启系统声音时候，默认使用2栏
+            if (ref.watch(interpretViewModelProvider).isSystemSoundEnabled) {
+              ref.read(interpretViewModelProvider.notifier).setPanelNumber(2);
+            } else {
+              ref.read(interpretViewModelProvider.notifier).setPanelNumber(1);
+            }
+          },
+          color: Theme.of(context).colorScheme.primary,
+          tooltip: '翻译系统声音',
+        ),
+      ),
+    );
+  }
+
   /// 构建录音按钮
   Widget _buildRecordButton(BuildContext context, WidgetRef ref) {
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -706,42 +712,11 @@ class InterpretView extends ConsumerWidget {
     );
   }
 
-  /// 一栏文本框
-  Widget _buildOneColumnLayout(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(interpretViewModelProvider);
-    debugPrint('panelNumber: ${state.panelNumber}');
-    return Column(
-      children: [
-        // 语言选择卡片
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: Padding(
-            padding: EdgeInsets.all(
-              MediaQuery.of(context).size.width < 600 ? 8 : 12,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildLanguageSelector(ref, context, 1),
-                const SizedBox(width: 16),
-                // _buildTranslateButton(context, ref),
-                // const SizedBox(width: 16),
-                Expanded(child: _buildLayoutPopupWindow(context, ref, 1)),
-              ],
-            ),
-          ),
-        ),
-        SizedBox(height: MediaQuery.of(context).size.width < 600 ? 16 : 24),
-        // 文本输入/输出卡片
-        if (state.oneContentTypes == 'o2o') _buildO2OTextField(context, ref, 1),
-        if (state.oneContentTypes == 's2s') _buildS2STextField(context, ref, 1),
-        if (state.oneContentTypes == 'o2s') _buildO2STextField(context, ref, 1),
-        if (state.oneContentTypes == 't2t') _buildF2fTextField(context, ref, 1),
-      ],
-    );
-  }
-
+  /// 语言输入输出说明
+  ///
+  /// o2o 只显示源语言，s2s 只显示目标语言，o2s 显示源语言和目标语言，t2t 源语言和目标语言分离
+  /// 开启系统声音时候，默认使用2栏
+  ///
   /// 构建O2O文本框/输入卡片
   Widget _buildO2OTextField(
     BuildContext context,
@@ -1121,6 +1096,42 @@ class InterpretView extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// 一栏文本框
+  Widget _buildOneColumnLayout(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(interpretViewModelProvider);
+    debugPrint('panelNumber: ${state.panelNumber}');
+    return Column(
+      children: [
+        // 语言选择卡片
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Padding(
+            padding: EdgeInsets.all(
+              MediaQuery.of(context).size.width < 600 ? 8 : 12,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLanguageSelector(ref, context, 1),
+                const SizedBox(width: 16),
+                // _buildTranslateButton(context, ref),
+                // const SizedBox(width: 16),
+                Expanded(child: _buildLayoutPopupWindow(context, ref, 1)),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: MediaQuery.of(context).size.width < 600 ? 16 : 24),
+        // 文本输入/输出卡片
+        if (state.oneContentTypes == 'o2o') _buildO2OTextField(context, ref, 1),
+        if (state.oneContentTypes == 's2s') _buildS2STextField(context, ref, 1),
+        if (state.oneContentTypes == 'o2s') _buildO2STextField(context, ref, 1),
+        if (state.oneContentTypes == 't2t') _buildF2fTextField(context, ref, 1),
+      ],
     );
   }
 
