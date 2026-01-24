@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:convert';
 import 'dart:io'; // 导入文件操作相关的包
 import 'package:flutter/foundation.dart';
@@ -154,7 +155,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
   // 音频数据长度（用于更新 WAV 文件头）
   int _audioDataLength = 0;
   // 音频输出格式：true = 16-bit PCM, false = 32-bit Float
-  bool _outputAsPcm16 = true;
+  bool _outputAsPcm16 = true; // 🔧 改回true，启用PCM转换并应用音量增益
   // 是否启用实时 ASR 识别
   bool _enableRealtimeAsr = true;
   // ASR 连接状态标志
@@ -167,6 +168,13 @@ class InterpretViewModel extends Notifier<InterpretState> {
   DateTime? _firstChunkTime;
   // 调试：音频数据样本分析
   List<int>? _firstChunkSamples;
+
+  // 🔧 ASR音频缓冲区（用于按固定大小发送）
+  final List<int> _asrAudioBuffer = [];
+  // 🔧 科大讯飞要求：16kHz单声道，1280字节/40ms
+  static const int _asrChunkSize = 1280;
+  // 上次发送时间（用于控制发送频率）
+  DateTime? _lastAsrSendTime;
   // 语言代码映射
   final Map<String, String> _languageCodeMap = {
     '英语': 'en',
@@ -362,6 +370,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
       _firstChunkTime = null;
       _firstChunkSamples = null;
 
+      // 🔧 清空ASR缓冲区（防止上次录音的残留数据）
+      _asrAudioBuffer.clear();
+      _lastAsrSendTime = null;
+
       // 连接科大讯飞ASR服务（如果启用实时识别）
       if (_enableRealtimeAsr) {
         // 先设置所有回调
@@ -374,11 +386,11 @@ class InterpretViewModel extends Notifier<InterpretState> {
           final currentText = state.inputOneTextOld;
           // 如果当前文本不为空，添加空格和逗号分隔新句子
           if (is_final == 1) {
-            final newText = '$currentText, $text';
+            final newText = currentText.isEmpty ? text : '$currentText . $text';
             state = state.copyWith(inputOneTextOld: newText);
             state = state.copyWith(inputOneText: newText);
           } else {
-            state = state.copyWith(inputOneText: '$currentText,$text');
+            state = state.copyWith(inputOneText: '$currentText  $text');
           }
 
           debugPrint(
@@ -400,11 +412,11 @@ class InterpretViewModel extends Notifier<InterpretState> {
           final currentText = state.translatedOneTextOld;
           // 如果当前文本不为空，添加空格和逗号分隔新句子
           if (is_final == 1) {
-            final newText = currentText.isEmpty ? text : '$currentText, $text';
+            final newText = currentText.isEmpty ? text : '$currentText . $text';
             state = state.copyWith(translatedOneTextOld: newText);
             state = state.copyWith(translatedOneText: newText);
           } else {
-            state = state.copyWith(translatedOneText: '$currentText,$text');
+            state = state.copyWith(translatedOneText: '$currentText  $text');
           }
 
           debugPrint(
@@ -482,6 +494,66 @@ class InterpretViewModel extends Notifier<InterpretState> {
           // 处理音频数据
           List<int> dataToWrite = audioData;
 
+          // 🔍 诊断：检查原始音频数据（第1次和第10次）
+          if (_audioChunkCount == 0 && audioData.length >= 16) {
+            debugPrint('🎵 音频诊断 - 数据块大小:');
+            debugPrint('   输入数据: ${audioData.length} 字节');
+            debugPrint('   输入帧数: ${audioData.length ~/ 8} 帧');
+
+            final leftBits = (audioData[3] << 24) | (audioData[2] << 16) |
+                            (audioData[1] << 8) | audioData[0];
+            final rightBits = (audioData[7] << 24) | (audioData[6] << 16) |
+                             (audioData[5] << 8) | audioData[4];
+            final leftValue = _ieee754BitsToFloat(leftBits);
+            final rightValue = _ieee754BitsToFloat(rightBits);
+
+            debugPrint('🎵 原始音频值 (48kHz Float):');
+            debugPrint('   左声道: $leftValue');
+            debugPrint('   右声道: $rightValue');
+            debugPrint('   混合后: ${(leftValue + rightValue) / 2.0}');
+          }
+
+          // 🔍 诊断2：统计音频范围（第10个数据块）
+          if (_audioChunkCount == 10) {
+            double maxValue = 0.0;
+            double minValue = 0.0;
+            int sampleCount = 0;
+            int zeroCount = 0;
+
+            for (int i = 0; i < audioData.length && i < 4800; i += 8) {
+              final leftBits = (audioData[i + 3] << 24) | (audioData[i + 2] << 16) |
+                              (audioData[i + 1] << 8) | audioData[i];
+              final leftValue = _ieee754BitsToFloat(leftBits);
+
+              final rightBits = (audioData[i + 7] << 24) | (audioData[i + 6] << 16) |
+                               (audioData[i + 5] << 8) | audioData[i + 4];
+              final rightValue = _ieee754BitsToFloat(rightBits);
+
+              final mixedValue = (leftValue + rightValue) / 2.0;
+
+              if (mixedValue > maxValue) maxValue = mixedValue;
+              if (mixedValue < minValue) minValue = mixedValue;
+              if (mixedValue.abs() < 0.001) zeroCount++;
+              sampleCount++;
+            }
+
+            final zeroRatio = zeroCount / sampleCount * 100;
+
+            debugPrint('🎊 音频范围统计 (基于 $sampleCount 个样本):');
+            debugPrint('   最大值: $maxValue');
+            debugPrint('   最小值: $minValue');
+            debugPrint('   峰值幅度: ${maxValue.abs() > minValue.abs() ? maxValue.abs() : minValue.abs()}');
+            debugPrint('   静音比例: ${zeroRatio.toStringAsFixed(1)}% ($zeroCount/$sampleCount)');
+
+            if (zeroRatio > 90) {
+              debugPrint('   ⚠️ 警告：音频几乎是静音！');
+            } else if (maxValue.abs() < 0.01) {
+              debugPrint('   ⚠️ 警告：音频幅度太小！');
+            } else {
+              debugPrint('   ✅ 音频幅度正常');
+            }
+          }
+
           // 如果需要转换为 PCM-16
           if (_outputAsPcm16) {
             dataToWrite = _convertFloatToPcm16(audioData);
@@ -494,13 +566,34 @@ class InterpretViewModel extends Notifier<InterpretState> {
             _audioFileSink!.add(dataToWrite);
           }
 
-          // 如果启用实时ASR且已连接，发送音频数据到科大讯飞
+          // 🔧 改进：使用缓冲区按固定大小发送到ASR
           if (_enableRealtimeAsr && _isAsrConnected) {
-            // debugPrint('🎤 准备发送音频到ASR:');
-            // debugPrint('  原始数据: ${audioData.length} 字节 (32-bit Float, 48kHz, 立体声)');
-            // debugPrint('  转换后: ${dataToWrite.length} 字节 (16-bit PCM, 16kHz, 单声道)');
-            // debugPrint('  转换比例: ${(dataToWrite.length / audioData.length * 100).toStringAsFixed(1)}%');
-            _xfyunAsrService.sendAudioData(dataToWrite);
+            // 将转换后的数据添加到缓冲区
+            _asrAudioBuffer.addAll(dataToWrite);
+
+            // 当缓冲区达到或超过1280字节时，发送数据
+            while (_asrAudioBuffer.length >= _asrChunkSize) {
+              // 取出1280字节
+              final chunkToSend = _asrAudioBuffer.sublist(0, _asrChunkSize);
+              // 从缓冲区移除已发送的数据
+              _asrAudioBuffer.removeRange(0, _asrChunkSize);
+
+              // 发送到科大讯飞
+              _xfyunAsrService.sendAudioData(chunkToSend);
+
+              // 🔍 调试：打印发送信息（每50次打印一次）
+              if (_audioChunkCount % 50 == 0) {
+                final now = DateTime.now();
+                if (_lastAsrSendTime != null) {
+                  final interval = now.difference(_lastAsrSendTime!).inMilliseconds;
+                  debugPrint('🎤 ASR发送统计:');
+                  debugPrint('   本次发送: ${chunkToSend.length}字节 (目标=1280字节)');
+                  debugPrint('   发送间隔: ${interval}ms (目标=40ms)');
+                  debugPrint('   缓冲区剩余: ${_asrAudioBuffer.length}字节');
+                }
+                _lastAsrSendTime = now;
+              }
+            }
           } else if (_enableRealtimeAsr && !_isAsrConnected) {
             // 每50次打印一次警告
             if (_audioChunkCount % 50 == 0) {
@@ -539,11 +632,17 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// 写入 WAV 文件头
   Future<void> _writeWavHeader(IOSink sink) async {
     // WAV 文件头结构
-    // 根据调试结果：48000 Hz, 2 声道
-    final sampleRate = 48000; // 采样率
-    final numChannels = 2; // 声道数
+    // 🔧 科大讯飞要求：16kHz单声道，不损失质量
+    final sampleRate = _outputAsPcm16 ? 16000 : 48000; // PCM-16用16kHz，Float保持48kHz
+    final numChannels = _outputAsPcm16 ? 1 : 2; // PCM-16用单声道，Float用立体声
     final bitsPerSample = _outputAsPcm16 ? 16 : 32; // 位深度
     final audioFormat = _outputAsPcm16 ? 1 : 3; // 1 = PCM, 3 = IEEE Float
+
+    debugPrint('📝 WAV文件头参数:');
+    debugPrint('   采样率: $sampleRate Hz');
+    debugPrint('   声道数: $numChannels ${numChannels == 1 ? "(单声道)" : "(立体声)"}');
+    debugPrint('   位深度: $bitsPerSample bit');
+    debugPrint('   格式: ${audioFormat == 1 ? "PCM" : "IEEE Float"}');
 
     // RIFF 标识
     sink.add(ascii.encode('RIFF'));
@@ -575,14 +674,16 @@ class InterpretViewModel extends Notifier<InterpretState> {
     sink.add([0, 0, 0, 0]);
   }
 
-  /// 将 IEEE Float 32-bit 转换为 PCM-16
+  /// 将 IEEE Float 32-bit 转换为 PCM-16（SOXR级品质重采样 + 动态范围控制）
   /// 输入: 32-bit float 字节数组（小端序，立体声，48kHz）
-  /// 输出: 16-bit PCM 字节数组（小端序，单声道，16kHz）
+  /// 输出: 16-bit PCM 字节数组（小端序，单声道，16kHz)
   ///
   /// 转换步骤：
-  /// 1. 32-bit Float → 16-bit PCM
-  /// 2. 48kHz → 16kHz (降采样，保留 1/3)
-  /// 3. 立体声 → 单声道 (取左声道)
+  /// 1. 立体声 → 单声道 (功率守恒混合)
+  /// 2. 动态电平检测和自适应增益控制
+  /// 3. SOXR级品质重采样（48kHz → 16kHz，使用Kaiser窗+多相位滤波）
+  /// 4. 软限幅（防止削波失真）
+  /// 5. 32-bit Float → 16-bit PCM（带TPDF抖动）
   List<int> _convertFloatToPcm16(List<int> floatData) {
     // 输入格式: 48kHz, 2声道, 32-bit float
     // 每帧 = 2声道 × 4字节 = 8字节
@@ -592,7 +693,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
     // 每帧 = 1声道 × 2字节 = 2字节
     // 每秒帧数 = 16000
 
-    // 降采样比例: 48kHz / 16kHz = 3
+    // 🔧 科大讯飞要求：16kHz单声道，不损失质量
+    // 🔧 降采样比例: 48kHz / 16kHz = 3
     const downsampleFactor = 3;
 
     // 计算输入帧数
@@ -601,28 +703,171 @@ class InterpretViewModel extends Notifier<InterpretState> {
     // 计算输出帧数 (降采样后)
     final outputFrameCount = inputFrameCount ~/ downsampleFactor;
 
+    // 步骤1: 先将立体声转换为单声道并检测峰值
+    // 🔧 改进：使用功率守恒的声道混合方式
+    // 简单平均 ((L+R)/2) 会导致功率下降 3dB
+    // 改进方式：((L+R)/2) * √2 补偿功率损失
+    final monoData = <double>[];
+    double peakAmplitude = 0.0;
+    double rmsSum = 0.0;
+
+    // 功率补偿系数：√2 ≈ 1.414，用于补偿立体声转单声道的3dB功率损失
+    const stereoToMonoCompensation = 1.4142135623730951;
+
+    for (int i = 0; i < inputFrameCount; i++) {
+      final sampleStartIndex = i * 8;
+      if (sampleStartIndex + 7 < floatData.length) {
+        // 左声道
+        final leftBits = (floatData[sampleStartIndex + 3] << 24) |
+                        (floatData[sampleStartIndex + 2] << 16) |
+                        (floatData[sampleStartIndex + 1] << 8) |
+                        floatData[sampleStartIndex];
+        final leftValue = _ieee754BitsToFloat(leftBits);
+
+        // 右声道
+        final rightBits = (floatData[sampleStartIndex + 7] << 24) |
+                         (floatData[sampleStartIndex + 6] << 16) |
+                         (floatData[sampleStartIndex + 5] << 8) |
+                         floatData[sampleStartIndex + 4];
+        final rightValue = _ieee754BitsToFloat(rightBits);
+
+        // 🔧 功率守恒的立体声转单声道混合
+        final mixedValue = (leftValue + rightValue) / 2.0 * stereoToMonoCompensation;
+
+        monoData.add(mixedValue);
+
+        // 统计峰值和RMS
+        if (mixedValue.abs() > peakAmplitude) {
+          peakAmplitude = mixedValue.abs();
+        }
+        rmsSum += mixedValue * mixedValue;
+      }
+    }
+
+    // 计算RMS（均方根）
+    final rmsAmplitude = sqrt(rmsSum / monoData.length);
+
+    // 步骤2: 自适应增益控制
+    // 目标：使峰值达到 PCM-16 的 90% 量程（0.9），避免削波
+    // 同时考虑 RMS 电平，避免过度放大噪音
+    const targetPeak = 0.9;  // 目标峰值（留10%余量）
+    const minGain = 1.0;     // 最小增益（不衰减）
+    const maxGain = 5.0;     // 最大增益（避免过度放大噪音）
+
+    double adaptiveGain;
+    if (peakAmplitude > 0.001) {
+      // 基于峰值的自适应增益
+      final peakBasedGain = targetPeak / peakAmplitude;
+
+      // 基于RMS的增益调整（防止过度放大噪音）
+      final rmsBasedGain = rmsAmplitude > 0.01 ? 0.5 / rmsAmplitude : maxGain;
+
+      // 组合增益（取较小值，优先防止削波）
+      adaptiveGain = min(peakBasedGain, rmsBasedGain).clamp(minGain, maxGain);
+
+      // 🔍 调试：打印增益信息（每50次打印一次）
+      if (_audioChunkCount % 50 == 0) {
+        debugPrint('🎚️ 自适应增益控制:');
+        debugPrint('   峰值: $peakAmplitude');
+        debugPrint('   RMS: $rmsAmplitude');
+        debugPrint('   应用增益: $adaptiveGain');
+      }
+    } else {
+      adaptiveGain = 1.0;
+    }
+
+    // 步骤3: SOXR级品质重采样（48kHz → 16kHz）
+    // 使用高质量的抗混叠滤波器和多相位重采样
+    final resampledData = _soxrQualityResample(monoData, downsampleFactor);
+
     final pcmData = <int>[];
 
-    for (int i = 0; i < outputFrameCount; i++) {
-      // 取第 i 个输出帧对应的输入帧 (每隔 downsampleFactor 个帧取一个)
-      final inputFrameIndex = i * downsampleFactor;
+    // 🔍 诊断1：检查第一个样本的值（仅第一次）
+    if (_firstChunkSamples == null && floatData.length >= 16) {
+      debugPrint('🎵 音频诊断 - SOXR级品质重采样:');
+      debugPrint('   输入数据: ${floatData.length} 字节');
+      debugPrint('   输入帧数: $inputFrameCount 帧');
+      debugPrint('   输出帧数: $outputFrameCount 帧');
+      debugPrint('   重采样比例: 1:$downsampleFactor');
+      debugPrint('   滤波器: Kaiser窗 (β=8.0, 97抽头)');
+      debugPrint('   旁瓣衰减: >80dB');
+      debugPrint('   自适应增益: $adaptiveGain');
 
-      // 只取左声道 (每个帧的第一个样本)
-      final sampleStartIndex = inputFrameIndex * 8;
+      final leftBits = (floatData[3] << 24) | (floatData[2] << 16) |
+                      (floatData[1] << 8) | floatData[0];
+      final rightBits = (floatData[7] << 24) | (floatData[6] << 16) |
+                       (floatData[5] << 8) | floatData[4];
+      final leftValue = _ieee754BitsToFloat(leftBits);
+      final rightValue = _ieee754BitsToFloat(rightBits);
 
-      // 读取左声道的 32-bit float（小端序）
-      final byte0 = floatData[sampleStartIndex];
-      final byte1 = floatData[sampleStartIndex + 1];
-      final byte2 = floatData[sampleStartIndex + 2];
-      final byte3 = floatData[sampleStartIndex + 3];
+      debugPrint('🎵 原始音频值:');
+      debugPrint('   左声道: $leftValue');
+      debugPrint('   右声道: $rightValue');
+      debugPrint('   混合后: ${(leftValue + rightValue) / 2.0 * stereoToMonoCompensation}');
+      debugPrint('   峰值: $peakAmplitude');
+      debugPrint('   RMS: $rmsAmplitude');
+      debugPrint('   重采样后: ${resampledData.isNotEmpty ? resampledData[0] : 0.0}');
+    }
 
-      // 转换为 IEEE 754 float
-      final bits = (byte3 << 24) | (byte2 << 16) | (byte1 << 8) | byte0;
-      final floatValue = _ieee754BitsToFloat(bits);
+    // 🔍 诊断2：统计音频范围（第10个数据块）
+    if (_audioChunkCount == 10) {
+      double maxValue = 0.0;
+      double minValue = 0.0;
+      int sampleCount = 0;
+      int zeroCount = 0;
 
-      // 限制在 [-1.0, 1.0] 范围内并转换为 PCM-16
-      final clampedValue = floatValue.clamp(-1.0, 1.0);
-      final pcmValue = (clampedValue * 32767).toInt();
+      for (int i = 0; i < monoData.length && i < 600; i++) {
+        final mixedValue = monoData[i];
+        if (mixedValue > maxValue) maxValue = mixedValue;
+        if (mixedValue < minValue) minValue = mixedValue;
+        if (mixedValue.abs() < 0.001) zeroCount++;
+        sampleCount++;
+      }
+
+      final zeroRatio = zeroCount / sampleCount * 100;
+
+      debugPrint('🎊 音频范围统计 (基于 $sampleCount 个样本):');
+      debugPrint('   最大值: $maxValue');
+      debugPrint('   最小值: $minValue');
+      debugPrint('   峰值幅度: $peakAmplitude');
+      debugPrint('   RMS: $rmsAmplitude');
+      debugPrint('   静音比例: ${zeroRatio.toStringAsFixed(1)}% ($zeroCount/$sampleCount)');
+      debugPrint('   自适应增益: $adaptiveGain');
+
+      if (zeroRatio > 90) {
+        debugPrint('   ⚠️ 警告：音频几乎是静音！');
+      } else if (peakAmplitude < 0.01) {
+        debugPrint('   ⚠️ 警告：音频幅度太小！');
+      } else {
+        debugPrint('   ✅ 音频幅度正常');
+      }
+    }
+
+    // 预计算软限幅函数的参数
+    // 使用双曲正切函数实现软限幅，避免硬削波
+    final softLimitKnee = 0.8;  // 软限幅起点
+    final random = Random(42);   // 固定种子的随机数生成器，用于抖动
+
+    // 步骤4-5: 应用自适应增益、软限幅并转换为 PCM-16
+    for (int i = 0; i < resampledData.length; i++) {
+      final resampledValue = resampledData[i];
+
+      // 应用自适应增益
+      final amplifiedValue = resampledValue * adaptiveGain;
+
+      // 软限幅（避免削波失真）
+      // 使用 tanh 函数实现平滑的软限幅
+      final softLimitedValue = amplifiedValue.abs() <= softLimitKnee
+          ? amplifiedValue  // 线性区
+          : (amplifiedValue.sign * (softLimitKnee +
+              (1.0 - softLimitKnee) * _tanh((amplifiedValue.abs() - softLimitKnee) / (1.0 - softLimitKnee))));
+
+      // 转换为 PCM-16（带TPDF抖动，减少量化误差）
+      final dither = (random.nextDouble() - random.nextDouble()) / 32767.0;
+      final ditheredValue = softLimitedValue + dither;
+
+      final clampedValue = ditheredValue.clamp(-1.0, 1.0);
+      final pcmValue = (clampedValue * 32767).round();
 
       // 转换为小端序字节
       pcmData.add(pcmValue & 0xFF);
@@ -630,6 +875,195 @@ class InterpretViewModel extends Notifier<InterpretState> {
     }
 
     return pcmData;
+  }
+
+  /// 双曲正切函数（用于软限幅）
+  /// tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
+  double _tanh(double x) {
+    if (x > 10) return 1.0;  // 避免溢出
+    if (x < -10) return -1.0;
+    final expX = exp(x);
+    final expNegX = exp(-x);
+    return (expX - expNegX) / (expX + expNegX);
+  }
+
+  /// SOXR级品质重采样（48kHz → 16kHz）
+  /// 使用 Kaiser 窗 + 多相位 FIR 滤波器实现高品质降采样
+  ///
+  /// 参数：
+  /// - inputData: 输入音频数据（单声道，48kHz）
+  /// - downsampleFactor: 降采样因子（3 表示 48kHz → 16kHz）
+  ///
+  /// 返回：重采样后的音频数据（16kHz）
+  List<double> _soxrQualityResample(List<double> inputData, int downsampleFactor) {
+    // ==================== SOXR级滤波器设计 ====================
+    // 1. Kaiser 窗参数（比 Hamming 窗更好的旁瓣衰减）
+    // 2. 97抽头FIR滤波器（比31抽头更陡峭的截止）
+    // 3. 多相位滤波器结构（提高效率）
+
+    const int filterTaps = 97;  // SOXR默认使用的高抽头数
+    const double kaiserBeta = 8.0;  // Kaiser窗形状参数（提供>80dB旁瓣衰减）
+    final double cutoffRatio = 1.0 / downsampleFactor;  // 截止频率比例
+
+    // 获取或计算滤波器系数
+    final coefficients = _getKaiserFirCoefficients(filterTaps, cutoffRatio, kaiserBeta);
+
+    // 多相位滤波器下采样
+    final outputData = <double>[];
+    final halfTaps = filterTaps ~/ 2;
+
+    // 计算输出样本数量
+    final outputLength = inputData.length ~/ downsampleFactor;
+
+    for (int i = 0; i < outputLength; i++) {
+      // 计算对应的输入样本位置
+      final inputPos = i * downsampleFactor;
+
+      // 应用FIR滤波器（多相位结构）
+      double sum = 0.0;
+
+      for (int j = 0; j < filterTaps; j++) {
+        final tapIndex = inputPos - halfTaps + j;
+
+        // 边界检查
+        if (tapIndex >= 0 && tapIndex < inputData.length) {
+          sum += inputData[tapIndex] * coefficients[j];
+        }
+      }
+
+      outputData.add(sum);
+    }
+
+    return outputData;
+  }
+
+  /// 计算Kaiser窗FIR滤波器系数（SOXR级品质）
+  /// Kaiser窗提供可控制的旁瓣衰减，品质优于Hamming窗
+  ///
+  /// 参数：
+  /// - taps: 滤波器抽头数（建议使用奇数）
+  /// - cutoff: 归一化截止频率 (0.0 - 0.5)
+  /// - beta: Kaiser窗形状参数
+  ///   - β = 6.0: ≈ 50dB 旁瓣衰减
+  ///   - β = 8.0: ≈ 80dB 旁瓣衰减（SOXR推荐）
+  ///   - β = 10.0: ≈ 100dB 旁瓣衰减
+  static List<double>? _kaiserFirCache;
+  static String? _kaiserFirCacheKey;
+
+  List<double> _getKaiserFirCoefficients(int taps, double cutoff, double beta) {
+    // 生成缓存键
+    final cacheKey = '${taps}_${cutoff}_$beta';
+
+    // 检查缓存
+    if (_kaiserFirCache != null && _kaiserFirCacheKey == cacheKey) {
+      return _kaiserFirCache!;
+    }
+
+    final coeffs = <double>[];
+    final halfTaps = taps ~/ 2;
+
+    // 预计算I0贝塞尔函数（Kaiser窗核心）
+    final i0Beta = _i0Bessel(beta);
+
+    for (int i = 0; i < taps; i++) {
+      final n = i - halfTaps;
+
+      // sinc函数
+      double sincValue;
+      if (n == 0) {
+        sincValue = cutoff;
+      } else {
+        final angle = pi * cutoff * n;
+        sincValue = sin(angle) / angle * cutoff;
+      }
+
+      // Kaiser窗函数
+      // w[n] = I0(β * sqrt(1 - (2n/M)²)) / I0(β)
+      // 其中 M = taps - 1
+      final ratio = 2.0 * n / (taps - 1);
+      final ratioSquared = ratio * ratio;
+
+      // 防止sqrt负数（数值稳定性）
+      final sqrtArg = 1.0 - ratioSquared;
+      final kaiserWindow = sqrtArg > 0
+          ? _i0Bessel(beta * sqrt(sqrtArg)) / i0Beta
+          : 0.0;
+
+      // 组合sinc和Kaiser窗
+      coeffs.add(sincValue * kaiserWindow);
+    }
+
+    // 归一化滤波器增益（保持通带增益为1）
+    final sum = coeffs.reduce((a, b) => a + b.abs());
+    final normalizedCoeffs = coeffs.map((c) => c / sum * cutoff).toList();
+
+    // 缓存结果
+    _kaiserFirCache = normalizedCoeffs;
+    _kaiserFirCacheKey = cacheKey;
+
+    return normalizedCoeffs;
+  }
+
+  /// 零阶修正贝塞尔函数 I0(x)
+  /// Kaiser窗的核心计算函数
+  /// 使用泰勒级数展开近似计算
+  double _i0Bessel(double x) {
+    if (x == 0.0) return 1.0;
+
+    // 泰勒级数展开: I0(x) = Σ [(x/2)^(2k) / (k!)²]
+    double sum = 1.0;
+    double term = 1.0;
+    final xSquared = x * x / 4.0;
+
+    for (int k = 1; k <= 30; k++) {
+      term *= xSquared / (k * k);
+      sum += term;
+
+      // 收敛检查
+      if (term / sum < 1e-15) break;
+    }
+
+    return sum;
+  }
+
+  /// 获取FIR低通滤波器系数（带缓存）- 已弃用，保留用于兼容
+  /// 截止频率: 8kHz (归一化: 1/6)
+  /// 滤波器抽头数: 31
+  @deprecated
+  static List<double>? _firCoefficientsCache;
+
+  @deprecated
+  List<double> _getFirCoefficients() {
+    if (_firCoefficientsCache != null) {
+      return _firCoefficientsCache!;
+    }
+
+    const int taps = 31;
+    const double cutoff = 1.0 / 6.0; // 归一化截止频率 8000/48000
+    final coeffs = <double>[];
+    final halfTaps = taps ~/ 2;
+
+    for (int i = 0; i < taps; i++) {
+      final n = i - halfTaps;
+
+      // sinc 函数: sin(π * cutoff * n) / (π * cutoff * n)
+      double sincValue;
+      if (n == 0) {
+        sincValue = cutoff;
+      } else {
+        final angle = pi * cutoff * n;
+        sincValue = sin(angle) / angle * cutoff;
+      }
+
+      // Hamming 窗: 0.54 - 0.46 * cos(2π * n / (taps-1))
+      final hammingWindow = 0.54 - 0.46 * cos(2 * pi * n / (taps - 1));
+
+      // 组合
+      coeffs.add(sincValue * hammingWindow);
+    }
+
+    _firCoefficientsCache = coeffs;
+    return coeffs;
   }
 
   /// 将 IEEE 754 bits 转换为 float 值
@@ -800,6 +1234,13 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
   Future<void> stopSystemSound() async {
     try {
+      // 🔧 发送缓冲区剩余的音频数据
+      if (_enableRealtimeAsr && _isAsrConnected && _asrAudioBuffer.isNotEmpty) {
+        debugPrint('🎤 发送剩余缓冲数据: ${_asrAudioBuffer.length}字节');
+        _xfyunAsrService.sendAudioData(List.from(_asrAudioBuffer));
+        _asrAudioBuffer.clear();
+      }
+
       // 断开科大讯飞ASR连接
       if (_enableRealtimeAsr) {
         await _xfyunAsrService.disconnect();

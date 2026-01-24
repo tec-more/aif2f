@@ -926,13 +926,87 @@ class InterpretView extends ConsumerWidget {
     );
   }
 
-  /// 构建O2S文本框/输入卡片
+  /// 构建O2S文本框/输入卡片（原文和译文交替显示）
   Widget _buildO2STextField(
     BuildContext context,
     WidgetRef ref, [
     int type = 1,
   ]) {
     final state = ref.watch(interpretViewModelProvider);
+    final inputText = type == 1 ? state.inputOneText : state.inputTwoText;
+    final translatedText = type == 1
+        ? state.translatedOneText
+        : state.translatedTwoText;
+    final fontSize = type == 1 ? state.onefontSize : state.twofontSize;
+
+    // 将文本按逗号分隔成句子
+    final inputSentences = inputText.isEmpty
+        ? []
+        : inputText
+              .split('.')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+    final translatedSentences = translatedText.isEmpty
+        ? []
+        : translatedText
+              .split('.')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+
+    // 创建所有行的列表
+    final List<Widget> allLines = [];
+
+    // 计算最大句子对数量
+    final maxPairs = inputSentences.length > translatedSentences.length
+        ? inputSentences.length
+        : translatedSentences.length;
+
+    for (int i = 0; i < maxPairs; i++) {
+      // 奇数行：显示原文
+      if (i < inputSentences.length) {
+        allLines.add(
+          SizedBox(
+            width: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 4.0),
+              child: Text(
+                inputSentences[i],
+                style: TextStyle(
+                  fontSize: fontSize,
+                  color: Colors.black54,
+                  height: 1.5,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // 偶数行：显示译文
+      if (i < translatedSentences.length) {
+        allLines.add(
+          SizedBox(
+            width: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Text(
+                translatedSentences[i],
+                style: TextStyle(
+                  fontSize: fontSize,
+                  color: Colors.black87,
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -940,74 +1014,63 @@ class InterpretView extends ConsumerWidget {
         height:
             MediaQuery.of(context).size.height *
             (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.6),
-        child: Column(
-          children: [
-            // 源语言输入区
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(
-                  MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller:
-                            TextEditingController(
-                                text: type == 1
-                                    ? state.inputOneText
-                                    : state.inputTwoText,
-                              )
-                              ..selection = TextSelection.fromPosition(
-                                TextPosition(
-                                  offset: type == 1
-                                      ? state.inputOneText.length
-                                      : state.inputTwoText.length,
-                                ),
+        child: Padding(
+          padding: EdgeInsets.all(
+            MediaQuery.of(context).size.width < 600 ? 12 : 24,
+          ),
+          child: SingleChildScrollView(
+            child: inputSentences.isEmpty && translatedSentences.isEmpty
+                ? Center(
+                    child: TextField(
+                      controller:
+                          TextEditingController(
+                              text: type == 1
+                                  ? state.inputOneText
+                                  : state.inputTwoText,
+                            )
+                            ..selection = TextSelection.fromPosition(
+                              TextPosition(
+                                offset: type == 1
+                                    ? state.inputOneText.length
+                                    : state.inputTwoText.length,
                               ),
-                        onChanged: (text) {
-                          ref
-                              .read(interpretViewModelProvider.notifier)
-                              .setInputText(text, type);
-                        },
-                        onSubmitted: (text) {
-                          ref
-                              .read(interpretViewModelProvider.notifier)
-                              .translateText(text, type);
-                        },
-                        maxLines: null,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: InputDecoration(
-                          hintText: '源语言/目标语言',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          hintStyle: TextStyle(
-                            fontSize: type == 1
-                                ? state.onefontSize
-                                : state.twofontSize,
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontSize: type == 1
-                              ? state.onefontSize
-                              : state.twofontSize,
-                          color: Colors.black87,
-                          height: 1.5,
-                        ),
+                            ),
+                      onChanged: (text) {
+                        ref
+                            .read(interpretViewModelProvider.notifier)
+                            .setInputText(text, type);
+                      },
+                      onSubmitted: (text) {
+                        ref
+                            .read(interpretViewModelProvider.notifier)
+                            .translateText(text, type);
+                      },
+                      maxLines: null,
+                      textAlignVertical: TextAlignVertical.top,
+                      decoration: InputDecoration(
+                        hintText: '源语言/目标语言',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        hintStyle: TextStyle(fontSize: fontSize),
+                      ),
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        color: Colors.black87,
+                        height: 1.5,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: allLines,
+                  ),
+          ),
         ),
       ),
     );
   }
 
-  /// 构建F2F文本输入/输出卡片
+  /// 构建F2F文本输入/输出卡片（上下分栏）
   Widget _buildF2fTextField(
     BuildContext context,
     WidgetRef ref, [
