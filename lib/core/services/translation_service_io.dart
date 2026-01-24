@@ -46,7 +46,7 @@ class TranslationService {
     String targetLanguage = 'en',
   }) async {
     try {
-      final uri = Uri.parse(AppConfig.zhipuSockBaseUrl);
+      final uri = Uri.parse(AppConfig.xFAPIKey);
       debugPrint('WebSocket URL: ${uri.toString()}');
 
       _channel = IOWebSocketChannel.connect(

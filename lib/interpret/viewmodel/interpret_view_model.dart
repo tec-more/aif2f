@@ -7,6 +7,7 @@ import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/interpret/model/interpret_model.dart';
 import 'package:aif2f/core/services/translation_service.dart';
+import 'package:aif2f/core/services/ai_asr.dart';
 import 'package:path/path.dart' as path;
 
 // 状态类
@@ -26,6 +27,12 @@ class InterpretState {
   final String translatedOneText;
   final String inputTwoText;
   final String translatedTwoText;
+
+  final String inputOneTextOld;
+  final String translatedOneTextOld;
+  final String inputTwoTextOld;
+  final String translatedTwoTextOld;
+
   final String sourceOneLanguage;
   final String targetOneLanguage;
   final String sourceTwoLanguage;
@@ -51,6 +58,12 @@ class InterpretState {
     this.translatedOneText = '',
     this.inputTwoText = '',
     this.translatedTwoText = '',
+
+    this.inputOneTextOld = '',
+    this.translatedOneTextOld = '',
+    this.inputTwoTextOld = '',
+    this.translatedTwoTextOld = '',
+
     this.sourceOneLanguage = '中文',
     this.targetOneLanguage = '英语',
     this.sourceTwoLanguage = '英语',
@@ -74,6 +87,12 @@ class InterpretState {
     String? translatedOneText,
     String? inputTwoText,
     String? translatedTwoText,
+
+    String? inputOneTextOld,
+    String? translatedOneTextOld,
+    String? inputTwoTextOld,
+    String? translatedTwoTextOld,
+
     String? sourceOneLanguage,
     String? targetOneLanguage,
     String? sourceTwoLanguage,
@@ -93,9 +112,15 @@ class InterpretState {
       twoContentTypes: twoContentTypes ?? this.twoContentTypes,
       statusMessage: statusMessage ?? this.statusMessage,
       inputOneText: inputOneText ?? this.inputOneText,
-      translatedOneText: translatedTwoText ?? this.translatedOneText,
+      translatedOneText: translatedOneText ?? this.translatedOneText,
       inputTwoText: inputTwoText ?? this.inputTwoText,
       translatedTwoText: translatedTwoText ?? this.translatedTwoText,
+
+      inputOneTextOld: inputOneTextOld ?? this.inputOneTextOld,
+      translatedOneTextOld: translatedOneTextOld ?? this.translatedOneTextOld,
+      inputTwoTextOld: inputTwoTextOld ?? this.inputTwoTextOld,
+      translatedTwoTextOld: translatedTwoTextOld ?? this.translatedTwoTextOld,
+
       sourceOneLanguage: sourceOneLanguage ?? this.sourceOneLanguage,
       targetOneLanguage: targetOneLanguage ?? this.targetOneLanguage,
       sourceTwoLanguage: sourceTwoLanguage ?? this.sourceTwoLanguage,
@@ -118,6 +143,8 @@ final interpretViewModelProvider =
 class InterpretViewModel extends Notifier<InterpretState> {
   // 初始化语音获取服务
   final FlutterF2fSound _flutterF2fSound = FlutterF2fSound();
+  // 科大讯飞实时语音识别服务
+  final XfyunRealtimeAsrService _xfyunAsrService = XfyunRealtimeAsrService();
   StreamSubscription<List<int>>? systemSoundCaptureStreamSubscription;
 
   // 音频文件输出流
@@ -128,6 +155,12 @@ class InterpretViewModel extends Notifier<InterpretState> {
   int _audioDataLength = 0;
   // 音频输出格式：true = 16-bit PCM, false = 32-bit Float
   bool _outputAsPcm16 = true;
+  // 是否启用实时 ASR 识别
+  bool _enableRealtimeAsr = true;
+  // ASR 连接状态标志
+  bool _isAsrConnected = false;
+  // 是否在录音完成后自动进行完整 ASR 识别
+  bool _enableAutoAsr = false;
   // 调试：音频数据块计数
   int _audioChunkCount = 0;
   // 调试：首次接收时间
@@ -293,8 +326,6 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// 开启后，会将系统声音发送到服务器进行翻译
   /// 开始获取系统声音并保存为标准 WAV 文件
   Future<void> startSystemSound() async {
-    if (!state.isSystemSoundEnabled) return;
-
     try {
       // 取消之前的订阅（如果有）
       await systemSoundCaptureStreamSubscription?.cancel();
@@ -317,6 +348,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
       debugPrint('音频文件保存路径: ${_audioFile!.path}');
 
+      // 清空之前的识别文本，准备新的识别会话
+      state = state.copyWith(inputOneText: '');
+      debugPrint('✂️ 已清空之前的识别文本');
+
       // 写入 WAV 文件头
       // 注意：这里需要根据实际捕获的音频格式调整参数
       await _writeWavHeader(_audioFileSink!);
@@ -327,8 +362,89 @@ class InterpretViewModel extends Notifier<InterpretState> {
       _firstChunkTime = null;
       _firstChunkSamples = null;
 
+      // 连接科大讯飞ASR服务（如果启用实时识别）
+      if (_enableRealtimeAsr) {
+        // 先设置所有回调
+        _xfyunAsrService.onTextSrcRecognized = (text, is_final) {
+          // 只在最终结果时更新（is_final == 1），跳过中间结果
+          debugPrint(
+            '   📝 更新前 - inputOneText: "${state.inputOneTextOld}" (${state.inputOneText.length} 字符)',
+          );
+          // 追加识别文本到状态（不覆盖已有内容）
+          final currentText = state.inputOneTextOld;
+          // 如果当前文本不为空，添加空格和逗号分隔新句子
+          if (is_final == 1) {
+            final newText = '$currentText, $text';
+            state = state.copyWith(inputOneTextOld: newText);
+            state = state.copyWith(inputOneText: newText);
+          } else {
+            state = state.copyWith(inputOneText: '$currentText,$text');
+          }
+
+          debugPrint(
+            '   📝 更新后 - inputOneText: "${state.inputOneText}" (${state.inputOneText.length} 字符)',
+          );
+
+          debugPrint('   ✅ State已更新');
+        };
+        _xfyunAsrService.onError = (error) {
+          debugPrint('科大讯飞ASR错误: $error');
+          state = state.copyWith(statusMessage: 'ASR错误: $error');
+        };
+        _xfyunAsrService.onTextDstRecognized = (text, is_final) {
+          debugPrint('🎉 科大讯飞ASR识别结果: "$text"');
+          debugPrint(
+            '   📝 更新前 - inputOneText: "${state.translatedOneText}" (${state.translatedOneText.length} 字符)',
+          );
+          // 追加识别文本到状态（不覆盖已有内容）
+          final currentText = state.translatedOneTextOld;
+          // 如果当前文本不为空，添加空格和逗号分隔新句子
+          if (is_final == 1) {
+            final newText = currentText.isEmpty ? text : '$currentText, $text';
+            state = state.copyWith(translatedOneTextOld: newText);
+            state = state.copyWith(translatedOneText: newText);
+          } else {
+            state = state.copyWith(translatedOneText: '$currentText,$text');
+          }
+
+          debugPrint(
+            '   📝 更新后 - translatedOneText: "${state.translatedOneText}" (${state.translatedOneText.length} 字符)',
+          );
+          debugPrint('   ✅ State已更新');
+        };
+        _xfyunAsrService.onError = (error) {
+          debugPrint('科大讯飞ASR错误: $error');
+          state = state.copyWith(statusMessage: 'ASR错误: $error');
+        };
+        _xfyunAsrService.onConnected = () {
+          debugPrint('✅ 科大讯飞ASR已连接');
+          _isAsrConnected = true; // 标记为已连接
+          state = state.copyWith(statusMessage: 'ASR已连接，正在识别...');
+        };
+        _xfyunAsrService.onDisconnected = () {
+          debugPrint('科大讯飞ASR已断开');
+          _isAsrConnected = false; // 标记为未连接
+        };
+        _xfyunAsrService.onError = (error) {
+          debugPrint('科大讯飞ASR错误: $error');
+          state = state.copyWith(statusMessage: 'ASR错误: $error');
+          _isAsrConnected = false; // 标记为未连接
+        };
+
+        // 等待连接成功
+        final connected = await _xfyunAsrService.connect();
+        if (!connected) {
+          debugPrint('❌ 科大讯飞ASR连接失败');
+          state = state.copyWith(statusMessage: 'ASR连接失败，仅保存音频文件');
+          _isAsrConnected = false;
+        } else {
+          debugPrint('✅ 科大讯飞ASR连接成功');
+          _isAsrConnected = true;
+        }
+      }
+
       // Get system sound capture stream
-      final systemSoundStream = _flutterF2fSound!.startSystemSoundCapture();
+      final systemSoundStream = _flutterF2fSound.startSystemSoundCapture();
 
       debugPrint('=== 开始系统声音捕获调试 ===');
 
@@ -372,9 +488,24 @@ class InterpretViewModel extends Notifier<InterpretState> {
           }
 
           _audioDataLength += dataToWrite.length;
+
           // 保存音频数据到文件
           if (_audioFileSink != null) {
             _audioFileSink!.add(dataToWrite);
+          }
+
+          // 如果启用实时ASR且已连接，发送音频数据到科大讯飞
+          if (_enableRealtimeAsr && _isAsrConnected) {
+            // debugPrint('🎤 准备发送音频到ASR:');
+            // debugPrint('  原始数据: ${audioData.length} 字节 (32-bit Float, 48kHz, 立体声)');
+            // debugPrint('  转换后: ${dataToWrite.length} 字节 (16-bit PCM, 16kHz, 单声道)');
+            // debugPrint('  转换比例: ${(dataToWrite.length / audioData.length * 100).toStringAsFixed(1)}%');
+            _xfyunAsrService.sendAudioData(dataToWrite);
+          } else if (_enableRealtimeAsr && !_isAsrConnected) {
+            // 每50次打印一次警告
+            if (_audioChunkCount % 50 == 0) {
+              debugPrint('⚠️ ASR未连接，跳过音频发送 (chunk #$_audioChunkCount)');
+            }
           }
         },
         onError: (error) async {
@@ -382,9 +513,15 @@ class InterpretViewModel extends Notifier<InterpretState> {
           state = state.copyWith(statusMessage: '系统声音捕获错误: $error');
           await _audioFileSink?.close();
           _audioFileSink = null;
+          if (_enableRealtimeAsr) {
+            await _xfyunAsrService.disconnect();
+          }
         },
         onDone: () async {
           debugPrint('System sound capture done');
+          if (_enableRealtimeAsr) {
+            await _xfyunAsrService.disconnect();
+          }
           // 关闭写入流并更新文件头
           await _finalizeAudioFile();
         },
@@ -439,19 +576,45 @@ class InterpretViewModel extends Notifier<InterpretState> {
   }
 
   /// 将 IEEE Float 32-bit 转换为 PCM-16
-  /// 输入: 32-bit float 字节数组（小端序，立体声）
-  /// 输出: 16-bit PCM 字节数组（小端序，立体声）
+  /// 输入: 32-bit float 字节数组（小端序，立体声，48kHz）
+  /// 输出: 16-bit PCM 字节数组（小端序，单声道，16kHz）
+  ///
+  /// 转换步骤：
+  /// 1. 32-bit Float → 16-bit PCM
+  /// 2. 48kHz → 16kHz (降采样，保留 1/3)
+  /// 3. 立体声 → 单声道 (取左声道)
   List<int> _convertFloatToPcm16(List<int> floatData) {
-    // 每个样本 4 字节，2 个声道 = 8 字节一个帧
-    final sampleCount = floatData.length ~/ 4;
+    // 输入格式: 48kHz, 2声道, 32-bit float
+    // 每帧 = 2声道 × 4字节 = 8字节
+    // 每秒帧数 = 48000
+
+    // 输出格式: 16kHz, 1声道, 16-bit PCM
+    // 每帧 = 1声道 × 2字节 = 2字节
+    // 每秒帧数 = 16000
+
+    // 降采样比例: 48kHz / 16kHz = 3
+    const downsampleFactor = 3;
+
+    // 计算输入帧数
+    final inputFrameCount = floatData.length ~/ 8;
+
+    // 计算输出帧数 (降采样后)
+    final outputFrameCount = inputFrameCount ~/ downsampleFactor;
+
     final pcmData = <int>[];
 
-    for (int i = 0; i < sampleCount; i++) {
-      // 读取 32-bit float（小端序）
-      final byte0 = floatData[i * 4];
-      final byte1 = floatData[i * 4 + 1];
-      final byte2 = floatData[i * 4 + 2];
-      final byte3 = floatData[i * 4 + 3];
+    for (int i = 0; i < outputFrameCount; i++) {
+      // 取第 i 个输出帧对应的输入帧 (每隔 downsampleFactor 个帧取一个)
+      final inputFrameIndex = i * downsampleFactor;
+
+      // 只取左声道 (每个帧的第一个样本)
+      final sampleStartIndex = inputFrameIndex * 8;
+
+      // 读取左声道的 32-bit float（小端序）
+      final byte0 = floatData[sampleStartIndex];
+      final byte1 = floatData[sampleStartIndex + 1];
+      final byte2 = floatData[sampleStartIndex + 2];
+      final byte3 = floatData[sampleStartIndex + 3];
 
       // 转换为 IEEE 754 float
       final bits = (byte3 << 24) | (byte2 << 16) | (byte1 << 8) | byte0;
@@ -530,6 +693,11 @@ class InterpretViewModel extends Notifier<InterpretState> {
       await _updateWavHeader(_audioFile!, _audioDataLength);
       debugPrint('音频文件已保存: ${_audioFile!.path}, 数据长度: $_audioDataLength 字节');
       state = state.copyWith(statusMessage: '音频文件已保存: ${_audioFile!.path}');
+
+      // 如果启用了自动ASR，进行语音识别
+      if (_enableAutoAsr) {
+        await _performAsrRecognition(_audioFile!.path);
+      }
     }
   }
 
@@ -632,6 +800,11 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
   Future<void> stopSystemSound() async {
     try {
+      // 断开科大讯飞ASR连接
+      if (_enableRealtimeAsr) {
+        await _xfyunAsrService.disconnect();
+      }
+
       // 取消系统声音捕获订阅
       await systemSoundCaptureStreamSubscription?.cancel();
       systemSoundCaptureStreamSubscription = null;
@@ -738,5 +911,50 @@ class InterpretViewModel extends Notifier<InterpretState> {
   Future<Directory> _getAudioSaveDirectory() async {
     // 所有平台统一使用应用程序当前目录下的 sounds 文件夹
     return Directory(path.join(Directory.current.path, 'sounds'));
+  }
+
+  /// 执行 ASR 语音识别
+  Future<void> _performAsrRecognition(String audioFilePath) async {
+    debugPrint('开始 ASR 识别: $audioFilePath');
+    state = state.copyWith(statusMessage: '正在识别语音...');
+  }
+
+  /// 语言名称转换为语言代码
+  String _getLanguageCode(String language) {
+    return _languageCodeMap[language] ?? 'zh';
+  }
+
+  /// 设置是否启用自动 ASR
+  void setAutoAsrEnabled(bool enabled) {
+    _enableAutoAsr = enabled;
+    debugPrint('自动ASR已${enabled ? "启用" : "禁用"}');
+  }
+
+  /// 设置是否启用实时ASR（分段识别）
+  void setRealtimeAsrEnabled(bool enabled) {
+    _enableRealtimeAsr = enabled;
+    debugPrint('实时ASR已${enabled ? "启用" : "禁用"}');
+  }
+
+  /// 清除已识别的文本
+  void clearRecognizedText() {
+    state = state.copyWith(inputOneText: '');
+    debugPrint('已清除识别文本');
+  }
+
+  /// 检查 ASR 是否已连接
+  bool isAsrConnected() {
+    return _isAsrConnected;
+  }
+
+  /// 获取 ASR 连接状态描述
+  String getAsrConnectionStatus() {
+    if (!_enableRealtimeAsr) {
+      return 'ASR 未启用';
+    }
+    if (_isAsrConnected) {
+      return 'ASR 已连接';
+    }
+    return 'ASR 未连接';
   }
 }

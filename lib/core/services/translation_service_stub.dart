@@ -35,8 +35,8 @@ class TranslationService {
     String targetLanguage = 'en',
   }) async {
     try {
-      // 智谱 AI 使用 Authorization 请求头进行认证
-      final uri = Uri.parse(AppConfig.zhipuSockBaseUrl);
+      // 科大讯飞 使用 Authorization 请求头进行认证
+      final uri = Uri.parse(AppConfig.xFInterpretationUrl);
       debugPrint('WebSocket URL: ${uri.toString()}');
 
       // 使用 IOWebSocketChannel 以支持自定义请求头

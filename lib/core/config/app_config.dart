@@ -18,6 +18,60 @@ class AppConfig {
     defaultValue: 'wss://open.bigmodel.cn/api/paas/v4/realtime',
   );
 
+  static const String xFBaseUrl = String.fromEnvironment(
+    'XF_BASE_URL',
+    defaultValue: 'https://open.bigmodel.cn/api/paas/v4',
+  );
+
+  static const String xFInterpretationUrl = String.fromEnvironment(
+    'XF_INTERPRETATION_URL',
+    defaultValue: 'wss://ws-api.xf-yun.com/v1/private/simult_interpretation',
+  );
+
+  static const String xFAPPID = String.fromEnvironment(
+    'XF_APPID',
+    defaultValue: '45f8b6dc',
+  );
+
+  static const String xFAPIKey = String.fromEnvironment(
+    'XF_APIKey',
+    defaultValue: 'd1e278fccac15457aaf4c98d85a65236',
+  );
+
+  static const String xFAPISecret = String.fromEnvironment(
+    'XF_APISecret',
+    defaultValue: 'NzhiOWNjZTA5YmJmMWU5MGIwYmM4YTIw',
+  );
+
+  // 科大讯飞实时语音转写 API URL（更稳定，推荐使用）
+  static const String xFRealtimeAsrUrl = String.fromEnvironment(
+    'XF_REALTIME_ASR_URL',
+    defaultValue: 'wss://iat-api.xfyun.cn/v2/iat',
+  );
+
+  // 默认使用实时语音转写
+  static const String xFDefaultAsrUrl = xFRealtimeAsrUrl;
+
+  /// Azure Speech Services配置
+  static const String azureSpeechKey = String.fromEnvironment(
+    'AZURE_SPEECH_KEY',
+    defaultValue: '', // 需要从Azure Portal获取
+  );
+
+  static const String azureSpeechRegion = String.fromEnvironment(
+    'AZURE_SPEECH_REGION',
+    defaultValue: 'eastasia', // 可选: eastasia, southeastasia, westus, eastus等
+  );
+
+  /// Azure Speech Services WebSocket URLs
+  static String get azureSpeechWsUrl =>
+      'wss://$azureSpeechRegion.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1';
+  static String get azureTranslationWsUrl =>
+      'wss://$azureSpeechRegion.s2s.speech.microsoft.com/speech/translation/cognitiveservices/v1';
+
+  /// 检查Azure是否已配置
+  static bool get isAzureConfigured => azureSpeechKey.isNotEmpty;
+
   /// OpenAI配置(可选)
   static const String openaiApiKey = String.fromEnvironment(
     'OPENAI_API_KEY',
