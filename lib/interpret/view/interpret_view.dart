@@ -675,14 +675,38 @@ class InterpretView extends ConsumerWidget {
               debugPrint('系统声音按钮点击结束');
               ref.read(interpretViewModelProvider.notifier).stopSystemSound();
             }
-
-            // 开启系统音频流，发送到大模型进行asr,返回值设置为源语言；
-            // 把源语言发送到大模型进行翻译，返回值设置为目标语言；
-            // 如果系统开启了系统音频流，则源语言和目标语言，显示在第一栏中，录音流显示在第二栏中；
-            // 如果系统没有开启系统音频流，则只能是录音流，录音流中的源语言和目标语言，显示在第一栏中；
           },
-          color: Theme.of(context).colorScheme.primary,
-          tooltip: '翻译系统声音',
+          tooltip: '获取系统声音',
+        ),
+      ),
+    );
+  }
+
+  /// TTS 播报按钮
+  /// [panel] 栏目：1 = 一栏, 2 = 二栏
+  Widget _ttsButton(BuildContext context, WidgetRef ref, {required int panel}) {
+    final state = ref.watch(interpretViewModelProvider);
+    final isEnabled = panel == 1
+        ? state.isOneTtsEnabled
+        : state.isTwoTtsEnabled;
+
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Builder(
+        builder: (context) => IconButton(
+          icon: isEnabled
+              ? const Icon(Icons.record_voice_over, size: 22)
+              : const Icon(Icons.voice_over_off, size: 22),
+          color: isEnabled ? Theme.of(context).colorScheme.primary : null,
+          onPressed: () {
+            if (panel == 1) {
+              ref.read(interpretViewModelProvider.notifier).toggleOneTts();
+            } else {
+              ref.read(interpretViewModelProvider.notifier).toggleTwoTts();
+            }
+          },
+          tooltip: ' ${isEnabled ? "停止播报" : "开始播报"}',
         ),
       ),
     );
@@ -1230,6 +1254,8 @@ class InterpretView extends ConsumerWidget {
                 const SizedBox(width: 16),
                 // _buildTranslateButton(context, ref),
                 // const SizedBox(width: 16),
+                _ttsButton(context, ref, panel: 1), // 一栏 TTS 播报按钮
+                const SizedBox(width: 8),
                 Expanded(child: _buildLayoutPopupWindow(context, ref, 1)),
               ],
             ),
@@ -1266,6 +1292,8 @@ class InterpretView extends ConsumerWidget {
                 const SizedBox(width: 16),
                 // _buildTranslateButton(context, ref),
                 // const SizedBox(width: 16),
+                _ttsButton(context, ref, panel: 2), // 二栏 TTS 播报按钮
+                const SizedBox(width: 8),
                 Expanded(child: _buildLayoutPopupWindow(context, ref, 2)),
               ],
             ),

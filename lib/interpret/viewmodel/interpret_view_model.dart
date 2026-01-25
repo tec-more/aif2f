@@ -18,6 +18,8 @@ class InterpretState {
   final bool isProcessing;
   final bool isConnected;
   final bool isSystemSoundEnabled;
+  final bool isOneTtsEnabled;  // 一栏 TTS 播报状态
+  final bool isTwoTtsEnabled;  // 二栏 TTS 播报状态
   final double onefontSize;
   final double twofontSize;
   final int panelNumber;
@@ -47,6 +49,8 @@ class InterpretState {
     this.isProcessing = false,
     this.isConnected = false,
     this.isSystemSoundEnabled = false,
+    this.isOneTtsEnabled = false,  // 默认关闭一栏 TTS
+    this.isTwoTtsEnabled = false,  // 默认关闭二栏 TTS
     this.onefontSize = 14,
     this.twofontSize = 14,
     this.panelNumber = 2, // 默认显示第二栏(录音) , 1 显示第一栏(系统音频)
@@ -78,6 +82,8 @@ class InterpretState {
     bool? isProcessing,
     bool? isConnected,
     bool? isSystemSoundEnabled,
+    bool? isOneTtsEnabled,
+    bool? isTwoTtsEnabled,
     double? onefontSize,
     double? twofontSize,
     int? panelNumber,
@@ -106,6 +112,8 @@ class InterpretState {
       isProcessing: isProcessing ?? this.isProcessing,
       isConnected: isConnected ?? this.isConnected,
       isSystemSoundEnabled: isSystemSoundEnabled ?? this.isSystemSoundEnabled,
+      isOneTtsEnabled: isOneTtsEnabled ?? this.isOneTtsEnabled,
+      isTwoTtsEnabled: isTwoTtsEnabled ?? this.isTwoTtsEnabled,
       onefontSize: onefontSize ?? this.onefontSize,
       twofontSize: twofontSize ?? this.twofontSize,
       panelNumber: panelNumber ?? this.panelNumber,
@@ -594,8 +602,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
               // 从缓冲区移除已发送的数据
               _asrAudioBuffer.removeRange(0, _asrChunkSize);
 
-              // 发送到科大讯飞
-              _xfyunAsrService.sendAudioData(chunkToSend);
+              // 发送到科大讯飞（一栏 = 系统声音）
+              _xfyunAsrService.sendAudioData(chunkToSend, type: 1);
 
               // 🔍 调试：打印发送信息（每50次打印一次）
               // final now = DateTime.now();
@@ -1291,7 +1299,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
       // 🔧 发送缓冲区剩余的音频数据
       if (_enableRealtimeAsr && _isAsrConnected && _asrAudioBuffer.isNotEmpty) {
         debugPrint('🎤 发送剩余缓冲数据: ${_asrAudioBuffer.length}字节');
-        _xfyunAsrService.sendAudioData(List.from(_asrAudioBuffer));
+        _xfyunAsrService.sendAudioData(List.from(_asrAudioBuffer), type: 1);
         _asrAudioBuffer.clear();
       }
 
@@ -1372,6 +1380,34 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// 切换系统声音状态
   void toggleSystemSound() {
     state = state.copyWith(isSystemSoundEnabled: !state.isSystemSoundEnabled);
+  }
+
+  /// 切换一栏 TTS 播报状态
+  void toggleOneTts() {
+    final newState = !state.isOneTtsEnabled;
+    state = state.copyWith(isOneTtsEnabled: newState);
+
+    if (newState) {
+      _xfyunAsrService.enableTts(type: 1);  // 一栏 TTS
+      debugPrint('✅ 一栏 TTS 播报已启用');
+    } else {
+      _xfyunAsrService.disableTts(type: 1);  // 一栏 TTS
+      debugPrint('⏸️ 一栏 TTS 播报已禁用');
+    }
+  }
+
+  /// 切换二栏 TTS 播报状态
+  void toggleTwoTts() {
+    final newState = !state.isTwoTtsEnabled;
+    state = state.copyWith(isTwoTtsEnabled: newState);
+
+    if (newState) {
+      _xfyunAsrService.enableTts(type: 2);  // 二栏 TTS
+      debugPrint('✅ 二栏 TTS 播报已启用');
+    } else {
+      _xfyunAsrService.disableTts(type: 2);  // 二栏 TTS
+      debugPrint('⏸️ 二栏 TTS 播报已禁用');
+    }
   }
 
   void setSrcContentTypes(String srcContentTypes) {

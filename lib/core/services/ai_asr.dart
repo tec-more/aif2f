@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:aif2f/core/config/app_config.dart';
+import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:crypto/crypto.dart';
@@ -25,6 +27,23 @@ class XfyunRealtimeAsrService {
   // 识别文本缓冲区（用于处理流式识别的中间结果）
   StringBuffer _recognitionBuffer = StringBuffer();
 
+  // TTS 音频播放器和缓冲队列（一栏）
+  final FlutterF2fSound _ttsPlayer1 = FlutterF2fSound();
+  final List<Uint8List> _ttsAudioBuffer1 = [];
+  final List<String> _ttsFilePaths1 = [];
+  bool _isPlayingTts1 = false;
+  bool _isTtsEnabled1 = false;  // 一栏 TTS 播放开关
+
+  // TTS 音频播放器和缓冲队列（二栏）
+  final FlutterF2fSound _ttsPlayer2 = FlutterF2fSound();
+  final List<Uint8List> _ttsAudioBuffer2 = [];
+  final List<String> _ttsFilePaths2 = [];
+  bool _isPlayingTts2 = false;
+  bool _isTtsEnabled2 = false;  // 二栏 TTS 播放开关
+
+  // 当前音频数据类型（1=一栏/系统声音, 2=二栏/录音）
+  int _currentAudioType = 1;
+
   // 识别结果回调
   // Function(String)? onTextRecognized;
   Function(String, int)? onTextDstRecognized;
@@ -32,6 +51,8 @@ class XfyunRealtimeAsrService {
   Function(String)? onError;
   Function()? onConnected;
   Function()? onDisconnected;
+  Function(Uint8List)? onTtsAudioReceived;
+  Function(int, bool)? onTtsStateChanged;  // TTS 状态变化回调 (type, isEnabled)
 
   XfyunRealtimeAsrService({
     String? appId,
@@ -186,7 +207,11 @@ class XfyunRealtimeAsrService {
   }
 
   /// 发送音频数据
-  void sendAudioData(List<int> audioData) {
+  /// [type] 音频类型：1 = 一栏（系统声音）, 2 = 二栏（录音），默认为 1
+  void sendAudioData(List<int> audioData, {int type = 1}) {
+    // 更新当前音频类型
+    _currentAudioType = type;
+
     if (!_isConnected || _wsChannel == null) {
       debugPrint('科大讯飞ASR: 未连接');
       return;
@@ -407,13 +432,39 @@ class XfyunRealtimeAsrService {
               debugPrint('解码翻译文本失败: $e');
             }
           }
-        } else {
-          // 只有识别结果，没有翻译结果
-          if (data['payload'] != null &&
-              data['payload']['recognition_results'] != null) {
-            debugPrint('⚠️ 本次响应只有识别结果，没有翻译结果');
-            debugPrint('   翻译结果通常在完整句子结束后才返回');
+        }
+
+        // 处理 TTS 音频结果 (payload.tts_results)
+        if (data['payload'] != null &&
+            data['payload']['tts_results'] != null) {
+          debugPrint('🔊 收到 TTS 音频片段');
+          final ttsResults = data['payload']['tts_results'];
+          final audioBase64 = ttsResults['audio'];
+
+          if (audioBase64 != null && audioBase64.isNotEmpty) {
+            try {
+              // 解码 base64 音频数据
+              final audioBytes = base64Decode(audioBase64);
+
+              debugPrint('🔊 TTS 音频片段大小: ${audioBytes.length} 字节');
+
+              // 触发 TTS 音频回调
+              onTtsAudioReceived?.call(Uint8List.fromList(audioBytes));
+
+              // 将音频片段添加到播放队列（使用当前音频类型）
+              _addToTtsQueue(audioBytes, type: _currentAudioType);
+            } catch (e) {
+              debugPrint('解码 TTS 音频失败: $e');
+            }
           }
+        }
+
+        // 只有识别结果，没有翻译结果
+        if (data['payload'] != null &&
+            data['payload']['recognition_results'] != null &&
+            data['payload']['streamtrans_results'] == null) {
+          debugPrint('⚠️ 本次响应只有识别结果，没有翻译结果');
+          debugPrint('   翻译结果通常在完整句子结束后才返回');
         }
       }
     } catch (e) {
@@ -465,6 +516,235 @@ class XfyunRealtimeAsrService {
     debugPrint('=========================================');
 
     _wsChannel!.sink.add(messageJson);
+  }
+
+  /// 添加 TTS 音频到播放队列并开始播放
+  /// type: 1 = 一栏（系统声音）, 2 = 二栏（录音）
+  void _addToTtsQueue(List<int> pcmData, {required int type}) {
+    // 根据类型获取对应的变量
+    final isEnabled = type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
+    final buffer = type == 1 ? _ttsAudioBuffer1 : _ttsAudioBuffer2;
+    final paths = type == 1 ? _ttsFilePaths1 : _ttsFilePaths2;
+    final isPlaying = type == 1 ? _isPlayingTts1 : _isPlayingTts2;
+
+    // 如果 TTS 未启用，只接收音频但不播放
+    if (!isEnabled) {
+      debugPrint('🔇 TTS$type 已禁用，音频已接收但不播放 (${pcmData.length} 字节)');
+      return;
+    }
+
+    // 将 PCM 转换为 WAV 格式
+    final wavData = pcmToWav(Uint8List.fromList(pcmData), sampleRate: 16000, numChannels: 1);
+
+    // 保存到临时文件
+    final tempDir = Directory.systemTemp;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final tempFile = File('${tempDir.path}/tts${type}_${timestamp}.wav');
+    tempFile.writeAsBytesSync(wavData);
+
+    debugPrint('🔊 TTS$type 音频已添加到队列: $tempFile (${wavData.length} 字节)');
+
+    // 添加到播放队列
+    buffer.add(wavData);
+    paths.add(tempFile.path);
+
+    // 如果当前没有播放，开始播放队列
+    if (!isPlaying) {
+      _playNextTts(type: type);
+    }
+  }
+
+  /// 播放队列中的下一个 TTS 音频
+  /// type: 1 = 一栏（系统声音）, 2 = 二栏（录音）
+  void _playNextTts({required int type}) {
+    // 根据类型获取对应的变量
+    final isEnabled = type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
+    final buffer = type == 1 ? _ttsAudioBuffer1 : _ttsAudioBuffer2;
+    final paths = type == 1 ? _ttsFilePaths1 : _ttsFilePaths2;
+    final player = type == 1 ? _ttsPlayer1 : _ttsPlayer2;
+
+    // 如果 TTS 被禁用，清空队列并停止播放
+    if (!isEnabled) {
+      _clearTtsQueue(type: type);
+      if (type == 1) {
+        _isPlayingTts1 = false;
+      } else {
+        _isPlayingTts2 = false;
+      }
+      return;
+    }
+
+    if (buffer.isEmpty) {
+      debugPrint('✅ TTS$type 播放队列为空，播放完成');
+      if (type == 1) {
+        _isPlayingTts1 = false;
+      } else {
+        _isPlayingTts2 = false;
+      }
+      return;
+    }
+
+    if (type == 1) {
+      _isPlayingTts1 = true;
+    } else {
+      _isPlayingTts2 = true;
+    }
+
+    buffer.removeAt(0); // 移除音频数据
+    final nextPath = paths.removeAt(0);
+
+    debugPrint('🔊 开始播放 TTS$type 音频 (队列剩余: ${buffer.length})');
+
+    player.play(path: nextPath).then((_) {
+      debugPrint('✅ TTS$type 音频片段播放完成');
+      // 删除已播放的临时文件
+      try {
+        File(nextPath).deleteSync();
+      } catch (e) {
+        debugPrint('⚠️ 删除临时文件失败: $e');
+      }
+      // 继续播放下一个
+      _playNextTts(type: type);
+    }).catchError((error) {
+      debugPrint('❌ TTS$type 播放失败: $error');
+      // 出错也继续播放下一个
+      _playNextTts(type: type);
+    });
+  }
+
+  /// 清空 TTS 播放队列
+  /// type: 1 = 一栏（系统声音）, 2 = 二栏（录音）
+  void _clearTtsQueue({required int type}) {
+    final buffer = type == 1 ? _ttsAudioBuffer1 : _ttsAudioBuffer2;
+    final paths = type == 1 ? _ttsFilePaths1 : _ttsFilePaths2;
+
+    // 删除所有临时文件
+    for (final path in paths) {
+      try {
+        File(path).deleteSync();
+      } catch (e) {
+        debugPrint('⚠️ 删除临时文件失败: $e');
+      }
+    }
+    // 清空队列
+    buffer.clear();
+    paths.clear();
+    debugPrint('🗑️ TTS$type 播放队列已清空');
+  }
+
+  /// 启用 TTS 播放
+  /// [type] 类型：1 = 一栏, 2 = 二栏
+  /// 从当前时刻开始播放接收到的 TTS 音频
+  void enableTts({required int type}) {
+    final isEnabled = type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
+
+    if (!isEnabled) {
+      if (type == 1) {
+        _isTtsEnabled1 = true;
+      } else {
+        _isTtsEnabled2 = true;
+      }
+      debugPrint('✅ TTS$type 播放已启用 - 从当前时刻开始播放 TTS 音频');
+      onTtsStateChanged?.call(type, true);
+    }
+  }
+
+  /// 禁用 TTS 播放
+  /// [type] 类型：1 = 一栏, 2 = 二栏
+  /// 停止播放当前和后续的 TTS 音频
+  void disableTts({required int type}) {
+    final isEnabled = type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
+    final player = type == 1 ? _ttsPlayer1 : _ttsPlayer2;
+    final isPlaying = type == 1 ? _isPlayingTts1 : _isPlayingTts2;
+
+    if (isEnabled) {
+      if (type == 1) {
+        _isTtsEnabled1 = false;
+      } else {
+        _isTtsEnabled2 = false;
+      }
+      debugPrint('⏸️ TTS$type 播放已禁用 - 停止播放当前和后续 TTS 音频');
+      onTtsStateChanged?.call(type, false);
+
+      // 停止当前播放
+      player.stop();
+      if (type == 1) {
+        _isPlayingTts1 = false;
+      } else {
+        _isPlayingTts2 = false;
+      }
+
+      // 清空播放队列
+      _clearTtsQueue(type: type);
+    }
+  }
+
+  /// 获取 TTS 播放状态
+  /// [type] 类型：1 = 一栏, 2 = 二栏
+  bool isTtsEnabled({required int type}) {
+    return type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
+  }
+
+  /// 切换 TTS 播放状态
+  /// [type] 类型：1 = 一栏, 2 = 二栏
+  void toggleTts({required int type}) {
+    if (isTtsEnabled(type: type)) {
+      disableTts(type: type);
+    } else {
+      enableTts(type: type);
+    }
+  }
+
+  /// 将 PCM 音频数据转换为 WAV 格式
+  /// 参数:
+  /// - pcmData: PCM 音频数据 (16-bit, 单声道)
+  /// - sampleRate: 采样率 (默认 16000Hz)
+  /// - numChannels: 声道数 (默认 1 = 单声道)
+  static Uint8List pcmToWav(Uint8List pcmData, {int sampleRate = 16000, int numChannels = 1}) {
+    final int bitsPerSample = 16;
+    final int byteRate = sampleRate * numChannels * bitsPerSample ~/ 8;
+    final int blockAlign = numChannels * bitsPerSample ~/ 8;
+    final int dataSize = pcmData.length;
+    final int fileSize = 36 + dataSize;
+
+    // 创建 WAV 文件字节缓冲区
+    final BytesBuilder builder = BytesBuilder();
+
+    // RIFF 头
+    builder.add(Uint8List.fromList([0x52, 0x49, 0x46, 0x46])); // "RIFF"
+    builder.add(_uint32ToLittleEndian(fileSize)); // 文件大小 - 8
+    builder.add(Uint8List.fromList([0x57, 0x41, 0x56, 0x45])); // "WAVE"
+
+    // fmt 子块
+    builder.add(Uint8List.fromList([0x66, 0x6D, 0x74, 0x20])); // "fmt "
+    builder.add(_uint32ToLittleEndian(16)); // fmt 块大小
+    builder.add(_uint16ToLittleEndian(1)); // 音频格式 (1 = PCM)
+    builder.add(_uint16ToLittleEndian(numChannels)); // 声道数
+    builder.add(_uint32ToLittleEndian(sampleRate)); // 采样率
+    builder.add(_uint32ToLittleEndian(byteRate)); // 字节率
+    builder.add(_uint16ToLittleEndian(blockAlign)); // 块对齐
+    builder.add(_uint16ToLittleEndian(bitsPerSample)); // 位深
+
+    // data 子块
+    builder.add(Uint8List.fromList([0x64, 0x61, 0x74, 0x61])); // "data"
+    builder.add(_uint32ToLittleEndian(dataSize)); // 数据大小
+
+    // PCM 数据
+    builder.add(pcmData);
+
+    return builder.takeBytes();
+  }
+
+  /// 将 32 位无符号整数转换为小端字节序
+  static Uint8List _uint32ToLittleEndian(int value) {
+    return Uint8List(4)
+      ..buffer.asByteData().setUint32(0, value, Endian.little);
+  }
+
+  /// 将 16 位无符号整数转换为小端字节序
+  static Uint8List _uint16ToLittleEndian(int value) {
+    return Uint8List(2)
+      ..buffer.asByteData().setUint16(0, value, Endian.little);
   }
 
   /// 释放资源
