@@ -258,10 +258,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_f2f_sound
-      sha256: "9f830eeb26f6df910d9afc035040e1331e58a945e6fe643c4c53980fb1dfcd90"
+      sha256: ea1e9bfc4867818db26ca6d38f877cfc79bfd91949e76437bfedec423d8197d8
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.0.1"
+    version: "1.0.2"
   flutter_lints:
     dependency: "direct dev"
     description:

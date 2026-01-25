@@ -42,7 +42,7 @@ dependencies:
   # 音频处理 - 注意：flutter_sound 不支持 Windows
   # Windows 构建时已注释 flutter_sound
   # flutter_sound: ^9.30.0
-  flutter_f2f_sound: ^1.0.1
+  flutter_f2f_sound: ^1.0.2
 
   # HTTP请求
   http: ^1.2.0
