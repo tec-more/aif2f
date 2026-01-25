@@ -44,6 +44,7 @@ class XfyunRealtimeAsrService {
   final List<String> _ttsFilePaths1 = [];
   bool _isPlayingTts1 = false;
   bool _isTtsEnabled1 = false;  // 一栏 TTS 播放开关
+  bool _isFlushing1 = false;  // 防止重复刷新
 
   // TTS 音频播放器和缓冲队列（二栏）
   final FlutterF2fSound _ttsPlayer2 = FlutterF2fSound();
@@ -51,6 +52,7 @@ class XfyunRealtimeAsrService {
   final List<String> _ttsFilePaths2 = [];
   bool _isPlayingTts2 = false;
   bool _isTtsEnabled2 = false;  // 二栏 TTS 播放开关
+  bool _isFlushing2 = false;  // 防止重复刷新
 
   // 识别结果回调
   // Function(String)? onTextRecognized;
@@ -575,8 +577,6 @@ class XfyunRealtimeAsrService {
     // 根据类型获取对应的变量
     final isEnabled = type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
     final buffer = type == 1 ? _ttsAudioBuffer1 : _ttsAudioBuffer2;
-    final paths = type == 1 ? _ttsFilePaths1 : _ttsFilePaths2;
-    final isPlaying = type == 1 ? _isPlayingTts1 : _isPlayingTts2;
 
     // 如果 TTS 未启用，只接收音频但不播放
     if (!isEnabled) {
@@ -584,24 +584,131 @@ class XfyunRealtimeAsrService {
       return;
     }
 
-    // 将 PCM 转换为 WAV 格式
-    final wavData = pcmToWav(Uint8List.fromList(pcmData), sampleRate: 16000, numChannels: 1);
+    // 验证 PCM 数据格式（应该是 16-bit, 单声道）
+    if (pcmData.length % 2 != 0) {
+      debugPrint('⚠️ TTS$type 警告: PCM 数据长度不是 2 的倍数 (${pcmData.length} 字节)');
+    }
 
-    // 保存到临时文件
-    final tempDir = Directory.systemTemp;
+    // 直接添加 PCM 数据到缓冲区
+    buffer.add(Uint8List.fromList(pcmData));
+
+    // 计算缓冲区总大小
+    int bufferSize = 0;
+    for (final data in buffer) {
+      bufferSize += data.length;
+    }
+
+    debugPrint('🔊 TTS$type PCM 已添加: ${pcmData.length} 字节, 缓冲区: ${buffer.length} 片段, $bufferSize 字节');
+
+    // 当缓冲区达到一定大小（约 1 秒的音频 = 32000 字节）或超过 10 个片段时，立即播放
+    if (bufferSize >= 32000 || buffer.length >= 10) {
+      debugPrint('⚡ 缓冲区已满，立即播放');
+      _flushTtsBuffer(type: type);
+    } else {
+      // 否则设置定时器，200ms 后播放（更快响应）
+      _scheduleTtsPlayback(type: type);
+    }
+  }
+
+  // 定时器映射
+  final Map<int, Timer?> _ttsTimers = {};
+
+  /// 延迟播放 TTS，以累积更多音频数据
+  void _scheduleTtsPlayback({required int type}) {
+    // 取消之前的定时器
+    _ttsTimers[type]?.cancel();
+
+    // 设置新的定时器（200ms 后播放，更快响应）
+    _ttsTimers[type] = Timer(const Duration(milliseconds: 200), () {
+      _flushTtsBuffer(type: type);
+    });
+  }
+
+  /// 将缓冲区的 PCM 数据转换为 WAV 并播放
+  void _flushTtsBuffer({required int type}) {
+    final isFlushing = type == 1 ? _isFlushing1 : _isFlushing2;
+    final isEnabled = type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
+    final buffer = type == 1 ? _ttsAudioBuffer1 : _ttsAudioBuffer2;
+    final paths = type == 1 ? _ttsFilePaths1 : _ttsFilePaths2;
+
+    // 取消定时器
+    _ttsTimers[type]?.cancel();
+    _ttsTimers[type] = null;
+
+    if (!isEnabled || buffer.isEmpty || isFlushing) {
+      return;
+    }
+
+    // 设置刷新标志
+    if (type == 1) {
+      _isFlushing1 = true;
+    } else {
+      _isFlushing2 = true;
+    }
+
+    // 计算总大小
+    int totalSize = 0;
+    for (final data in buffer) {
+      totalSize += data.length;
+    }
+
+    debugPrint('🔧 合并 TTS$type 音频: ${buffer.length} 个片段, $totalSize 字节');
+
+    // 合并所有 PCM 数据
+    final mergedPcm = Uint8List(totalSize);
+    int offset = 0;
+    for (final data in buffer) {
+      mergedPcm.setRange(offset, offset + data.length, data);
+      offset += data.length;
+    }
+
+    // 清空缓冲区
+    buffer.clear();
+
+    // 转换为 WAV 格式
+    final wavData = pcmToWav(mergedPcm, sampleRate: 16000, numChannels: 1);
+
+    // 保存到当前目录下的 sounds/ttl 文件夹
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final tempFile = File('${tempDir.path}/tts${type}_${timestamp}.wav');
-    tempFile.writeAsBytesSync(wavData);
+    final currentDir = Directory.current.path;
+    final ttsDir = Directory('$currentDir/sounds/ttl');
 
-    debugPrint('🔊 TTS$type 音频已添加到队列: $tempFile (${wavData.length} 字节)');
+    // 确保目录存在
+    if (!ttsDir.existsSync()) {
+      ttsDir.createSync(recursive: true);
+      debugPrint('📁 创建目录: ${ttsDir.path}');
+    }
 
-    // 添加到播放队列
-    buffer.add(wavData);
-    paths.add(tempFile.path);
+    final tempFile = File('${ttsDir.path}/tts${type}_$timestamp.wav');
 
-    // 如果当前没有播放，开始播放队列
-    if (!isPlaying) {
+    try {
+      tempFile.writeAsBytesSync(wavData);
+      paths.add(tempFile.path);
+
+      // 验证文件
+      final exists = tempFile.existsSync();
+      final size = tempFile.lengthSync();
+
+      debugPrint('✅ TTS$type 音频已保存: ${tempFile.path}');
+      debugPrint('   文件存在: $exists, 大小: $size 字节, 预期: ${wavData.length} 字节');
+
+      // 清除刷新标志
+      if (type == 1) {
+        _isFlushing1 = false;
+      } else {
+        _isFlushing2 = false;
+      }
+
+      // 开始播放（文件已准备好）
       _playNextTts(type: type);
+    } catch (error) {
+      debugPrint('❌ 保存 TTS$type 音频失败: $error');
+      // 清除刷新标志
+      if (type == 1) {
+        _isFlushing1 = false;
+      } else {
+        _isFlushing2 = false;
+      }
     }
   }
 
@@ -614,8 +721,11 @@ class XfyunRealtimeAsrService {
     final paths = type == 1 ? _ttsFilePaths1 : _ttsFilePaths2;
     final player = type == 1 ? _ttsPlayer1 : _ttsPlayer2;
 
+    debugPrint('🎵 _playNextTts 被调用: type=$type, isEnabled=$isEnabled, 待播放文件数=${paths.length}');
+
     // 如果 TTS 被禁用，清空队列并停止播放
     if (!isEnabled) {
+      debugPrint('🚫 TTS$type 已禁用，清空队列');
       _clearTtsQueue(type: type);
       if (type == 1) {
         _isPlayingTts1 = false;
@@ -625,12 +735,17 @@ class XfyunRealtimeAsrService {
       return;
     }
 
-    if (buffer.isEmpty) {
+    if (paths.isEmpty) {
       debugPrint('✅ TTS$type 播放队列为空，播放完成');
       if (type == 1) {
         _isPlayingTts1 = false;
       } else {
         _isPlayingTts2 = false;
+      }
+      // 检查是否还有数据在缓冲区待处理
+      if (buffer.isNotEmpty) {
+        debugPrint('⚠️ 缓冲区还有数据，刷新并播放');
+        _flushTtsBuffer(type: type);
       }
       return;
     }
@@ -641,24 +756,49 @@ class XfyunRealtimeAsrService {
       _isPlayingTts2 = true;
     }
 
-    buffer.removeAt(0); // 移除音频数据
     final nextPath = paths.removeAt(0);
 
-    debugPrint('🔊 开始播放 TTS$type 音频 (队列剩余: ${buffer.length})');
+    debugPrint('🔊 开始播放 TTS$type 音频: $nextPath (剩余: ${paths.length} 个文件)');
 
-    player.play(path: nextPath).then((_) {
-      debugPrint('✅ TTS$type 音频片段播放完成');
-      // 删除已播放的临时文件
-      try {
-        File(nextPath).deleteSync();
-      } catch (e) {
-        debugPrint('⚠️ 删除临时文件失败: $e');
-      }
-      // 继续播放下一个
+    // 检查文件是否存在
+    if (!File(nextPath).existsSync()) {
+      debugPrint('❌ TTS$type 文件不存在: $nextPath');
       _playNextTts(type: type);
+      return;
+    }
+
+    // 检查是否有播放正在进行
+    final isPlaying = type == 1 ? _isPlayingTts1 : _isPlayingTts2;
+
+    debugPrint('🎵 准备播放: path=$nextPath, 当前播放状态=$isPlaying');
+
+    // 方案1: 使用系统命令播放（Windows Media Player）
+    debugPrint('🎵 使用 Windows Media Player 播放...');
+    Process.start('powershell', ['-c', '(New-Object -ComObject WMPlayer.Player).URL="$nextPath"']);
+
+    // 方案2: 同时尝试 flutter_f2f_sound 播放器（用于测试）
+    player.play(path: nextPath, volume: 1.0).then((_) {
+      debugPrint('📤 flutter_f2f_sound 播放命令已发送');
     }).catchError((error) {
-      debugPrint('❌ TTS$type 播放失败: $error');
-      // 出错也继续播放下一个
+      debugPrint('❌ flutter_f2f_sound 播放失败: $error');
+    });
+
+    // 计算音频时长并等待播放完成
+    final file = File(nextPath);
+    final fileSize = file.lengthSync();
+    final audioDataSize = fileSize - 44; // 减去 WAV 头部
+    final durationMs = (audioDataSize / 32000 * 1000).ceil();
+
+    debugPrint('⏱️ TTS$type 音频时长约: ${durationMs}ms, 文件大小: $fileSize 字节');
+
+    // 等待播放完成
+    Future.delayed(Duration(milliseconds: durationMs + 100), () {
+      debugPrint('✅ TTS$type 批量音频播放完成');
+
+      // 暂时保留文件用于调试，不删除
+      debugPrint('📁 临时文件保留（未删除）: $nextPath');
+
+      // 继续播放下一个
       _playNextTts(type: type);
     });
   }
@@ -668,6 +808,10 @@ class XfyunRealtimeAsrService {
   void _clearTtsQueue({required int type}) {
     final buffer = type == 1 ? _ttsAudioBuffer1 : _ttsAudioBuffer2;
     final paths = type == 1 ? _ttsFilePaths1 : _ttsFilePaths2;
+
+    // 取消定时器
+    _ttsTimers[type]?.cancel();
+    _ttsTimers[type] = null;
 
     // 删除所有临时文件
     for (final path in paths) {
