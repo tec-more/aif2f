@@ -9,6 +9,13 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:crypto/crypto.dart';
 
+// 条件日志函数 - 只在调试模式下打印
+void _log(String message) {
+  if (kDebugMode) {
+    debugPrint(message);
+  }
+}
+
 /// 科大讯飞实时语音识别服务
 /// 使用同传翻译 API (simult_interpretation)
 class XfyunRealtimeAsrService {
@@ -73,11 +80,11 @@ class XfyunRealtimeAsrService {
        _apiKey = apiKey ?? AppConfig.xFAPIKey,
        _apiSecret = apiSecret ?? AppConfig.xFAPISecret,
        _wsUrl = wsUrl ?? AppConfig.xFInterpretationUrl {
-    debugPrint('科大讯飞ASR服务初始化:');
-    debugPrint('  APPID: $_appId');
-    debugPrint('  APIKey: ${_apiKey.substring(0, 8)}...');
-    debugPrint('  APISecret: ${_apiSecret.substring(0, 8)}...');
-    debugPrint('  URL: $_wsUrl');
+    _log('科大讯飞ASR服务初始化:');
+    _log('  APPID: $_appId');
+    _log('  APIKey: ${_apiKey.substring(0, 8)}...');
+    _log('  APISecret: ${_apiSecret.substring(0, 8)}...');
+    _log('  URL: $_wsUrl');
   }
 
   /// 生成科大讯飞 API 鉴权参数（按照官方文档）
@@ -95,7 +102,7 @@ class XfyunRealtimeAsrService {
     // 格式: host: $host\ndate: $date\nGET /path HTTP/1.1
     final signatureOrigin = 'host: $host\ndate: $date\nGET $path HTTP/1.1';
 
-    debugPrint('签名原始字段:\n$signatureOrigin');
+    _log('签名原始字段:\n$signatureOrigin');
 
     // 4. 使用 hmac-sha256 签名
     final key = utf8.encode(_apiSecret);
@@ -106,18 +113,18 @@ class XfyunRealtimeAsrService {
     // 5. base64 编码得到 signature
     final signature = base64.encode(digest.bytes);
 
-    debugPrint('签名结果: $signature');
+    _log('签名结果: $signature');
 
     // 6. 构建 authorization_origin
     final authorizationOrigin =
         'api_key="$_apiKey", algorithm="hmac-sha256", headers="host date request-line", signature="$signature"';
 
-    debugPrint('Authorization 原始: $authorizationOrigin');
+    _log('Authorization 原始: $authorizationOrigin');
 
     // 7. base64 编码得到 authorization
     final authorization = base64.encode(utf8.encode(authorizationOrigin));
 
-    debugPrint('Authorization: $authorization');
+    _log('Authorization: $authorization');
 
     return {'host': host, 'date': date, 'authorization': authorization};
   }
@@ -126,7 +133,7 @@ class XfyunRealtimeAsrService {
   Future<bool> connect() async {
     try {
       if (_isConnected) {
-        debugPrint('科大讯飞ASR: 已经连接');
+        _log('科大讯飞ASR: 已经连接');
         return true;
       }
 
@@ -135,8 +142,8 @@ class XfyunRealtimeAsrService {
       _hasSentFirstMessage = false;
       _recognitionBuffer.clear(); // 清空识别缓冲区
 
-      debugPrint('正在连接科大讯飞ASR: $_wsUrl');
-      debugPrint('APPID: $_appId');
+      _log('正在连接科大讯飞ASR: $_wsUrl');
+      _log('APPID: $_appId');
 
       // 生成鉴权参数
       final authParams = _generateAuthParams();
@@ -150,8 +157,8 @@ class XfyunRealtimeAsrService {
           '&date=${Uri.encodeComponent(authParams['date']!)}'
           '&serviceId=simult_interpretation';
 
-      debugPrint('WebSocket URL: $wsUrlWithAuth');
-      debugPrint('正在建立 WebSocket 连接，最长等待 30 秒...');
+      _log('WebSocket URL: $wsUrlWithAuth');
+      _log('正在建立 WebSocket 连接，最长等待 30 秒...');
 
       // 创建WebSocket连接
       _wsChannel = IOWebSocketChannel.connect(wsUrlWithAuth);
@@ -160,22 +167,22 @@ class XfyunRealtimeAsrService {
       await _wsChannel!.ready
           .then((_) {
             _isConnected = true;
-            debugPrint('✅ 科大讯飞ASR: WebSocket 连接成功');
+            _log('✅ 科大讯飞ASR: WebSocket 连接成功');
             onConnected?.call();
           })
           .timeout(
             const Duration(seconds: 30),
             onTimeout: () {
-              debugPrint('❌ 科大讯飞ASR: 连接超时（30秒）');
-              debugPrint('可能原因：');
-              debugPrint('  1. 无法访问 ws-api.xf-yun.com（网络问题/防火墙）');
-              debugPrint('  2. API 密钥配置错误');
-              debugPrint('  3. 需要使用 VPN');
+              _log('❌ 科大讯飞ASR: 连接超时（30秒）');
+              _log('可能原因：');
+              _log('  1. 无法访问 ws-api.xf-yun.com（网络问题/防火墙）');
+              _log('  2. API 密钥配置错误');
+              _log('  3. 需要使用 VPN');
               throw Exception('连接超时：30秒内无法建立WebSocket连接');
             },
           );
 
-      debugPrint('开始监听 WebSocket 消息...');
+      _log('开始监听 WebSocket 消息...');
 
       // 监听消息
       _wsChannel!.stream.listen(
@@ -183,33 +190,33 @@ class XfyunRealtimeAsrService {
           _handleMessage(message);
         },
         onError: (error) {
-          debugPrint('❌ 科大讯飞ASR: 消息错误: $error');
-          debugPrint('错误详情: $error');
+          _log('❌ 科大讯飞ASR: 消息错误: $error');
+          _log('错误详情: $error');
           _isConnected = false;
           onError?.call('消息处理错误: $error');
         },
         onDone: () {
-          debugPrint('🔌 科大讯飞ASR: 连接关闭 (onDone触发)');
-          debugPrint('可能原因:');
-          debugPrint('  1. 服务端主动关闭连接');
-          debugPrint('  2. 网络中断');
-          debugPrint('  3. 消息格式错误导致服务端拒绝');
-          debugPrint('  4. 未发送必要的配置消息');
+          _log('🔌 科大讯飞ASR: 连接关闭 (onDone触发)');
+          _log('可能原因:');
+          _log('  1. 服务端主动关闭连接');
+          _log('  2. 网络中断');
+          _log('  3. 消息格式错误导致服务端拒绝');
+          _log('  4. 未发送必要的配置消息');
           _isConnected = false;
           onDisconnected?.call();
         },
       );
 
-      debugPrint('科大讯飞ASR: connect() 返回，连接状态: $_isConnected');
-      debugPrint('');
-      debugPrint('🔍 连接成功，准备发送音频数据');
-      debugPrint('  ✓ WebSocket 连接已建立');
-      debugPrint('  ✓ 将按照科大讯飞官方格式发送消息');
-      debugPrint('  ✓ 首条消息将包含完整配置参数');
-      debugPrint('');
+      _log('科大讯飞ASR: connect() 返回，连接状态: $_isConnected');
+      _log('');
+      _log('🔍 连接成功，准备发送音频数据');
+      _log('  ✓ WebSocket 连接已建立');
+      _log('  ✓ 将按照科大讯飞官方格式发送消息');
+      _log('  ✓ 首条消息将包含完整配置参数');
+      _log('');
       return _isConnected;
     } catch (e) {
-      debugPrint('❌ 科大讯飞ASR: 连接失败: $e');
+      _log('❌ 科大讯飞ASR: 连接失败: $e');
       onError?.call('连接失败: $e');
       _isConnected = false;
       return false;
@@ -220,7 +227,7 @@ class XfyunRealtimeAsrService {
   /// [type] 音频类型：1 = 一栏（系统声音）, 2 = 二栏（录音），默认为 1
   void sendAudioData(List<int> audioData, {int type = 1}) {
     if (!_isConnected || _wsChannel == null) {
-      debugPrint('科大讯飞ASR: 未连接');
+      _log('科大讯飞ASR: 未连接');
       return;
     }
 
@@ -295,7 +302,7 @@ class XfyunRealtimeAsrService {
 
     // 每100条消息打印一次状态
     if (seq % 100 == 0 || seq < 5) {
-      debugPrint(
+      _log(
         '📤 科大讯飞ASR发送消息 [type=$type] #$seq (状态: $status, 大小: ${messageJson.length} 字符)',
       );
     }
@@ -332,7 +339,7 @@ class XfyunRealtimeAsrService {
           final payload = data['payload'] as Map<String, dynamic>;
           final payloadKeys = payload.keys.join(', ');
           if (payloadKeys.isNotEmpty) {
-            debugPrint('📦 Payload包含: $payloadKeys');
+            _log('📦 Payload包含: $payloadKeys');
           }
         }
 
@@ -343,12 +350,12 @@ class XfyunRealtimeAsrService {
           final sid = header['sid'];
 
           if (sid != null && _audioSeq % 100 == 0) {
-            debugPrint('📡 科大讯飞ASR会话: $sid');
+            _log('📡 科大讯飞ASR会话: $sid');
           }
 
           if (code != null && code != 0) {
             final errorMsg = header['message'] ?? '未知错误';
-            debugPrint('❌ 科大讯飞ASR: 错误 ($code): $errorMsg');
+            _log('❌ 科大讯飞ASR: 错误 ($code): $errorMsg');
             onError?.call('识别错误: $errorMsg');
             return;
           }
@@ -405,7 +412,7 @@ class XfyunRealtimeAsrService {
                 }
               }
             } catch (e) {
-              debugPrint('解码识别文本失败: $e');
+              _log('解码识别文本失败: $e');
             }
           }
         }
@@ -413,7 +420,7 @@ class XfyunRealtimeAsrService {
         // 处理翻译结果 (payload.streamtrans_results)
         if (data['payload'] != null &&
             data['payload']['streamtrans_results'] != null) {
-          debugPrint('🌐 收到翻译结果');
+          _log('🌐 收到翻译结果');
           final transResults = data['payload']['streamtrans_results'];
           final textBase64 = transResults['text'];
 
@@ -424,7 +431,7 @@ class XfyunRealtimeAsrService {
               final textJson = utf8.decode(textBytes);
               final textData = jsonDecode(textJson);
 
-              debugPrint('翻译结果JSON: $textData');
+              _log('翻译结果JSON: $textData');
 
               // 提取翻译文本
               // textData 可能是 Map（单个翻译）或 List（多个翻译）
@@ -435,11 +442,11 @@ class XfyunRealtimeAsrService {
                 final isFinal = textData['is_final'] ?? 0;
 
                 if (src != null) {
-                  debugPrint('📝 科大讯飞ASR原文（中文）: $src (is_final: $isFinal)');
+                  _log('📝 科大讯飞ASR原文（中文）: $src (is_final: $isFinal)');
                   onTextSrcRecognized?.call(src, isFinal); // 原文→ inputOneText
                 }
                 if (dst != null) {
-                  debugPrint('🌏 科大讯飞ASR译文（英文）: $dst (is_final: $isFinal)');
+                  _log('🌏 科大讯飞ASR译文（英文）: $dst (is_final: $isFinal)');
                   onTextDstRecognized?.call(dst, isFinal); // 译文→ translatedOneText
                 }
               } else if (textData is List) {
@@ -451,18 +458,18 @@ class XfyunRealtimeAsrService {
                     final isFinal = item['is_final'] ?? 0;
 
                     if (src != null) {
-                      debugPrint('📝 科大讯飞ASR原文（中文）: $src (is_final: $isFinal)');
+                      _log('📝 科大讯飞ASR原文（中文）: $src (is_final: $isFinal)');
                       onTextSrcRecognized?.call(src, isFinal); // 原文→ inputOneText
                     }
                     if (dst != null) {
-                      debugPrint('🌏 科大讯飞ASR译文（英文）: $dst (is_final: $isFinal)');
+                      _log('🌏 科大讯飞ASR译文（英文）: $dst (is_final: $isFinal)');
                       onTextDstRecognized?.call(dst, isFinal); // 译文→ translatedOneText
                     }
                   }
                 }
               }
             } catch (e) {
-              debugPrint('解码翻译文本失败: $e');
+              _log('解码翻译文本失败: $e');
             }
           }
         }
@@ -470,7 +477,7 @@ class XfyunRealtimeAsrService {
         // 处理 TTS 音频结果 (payload.tts_results)
         if (data['payload'] != null &&
             data['payload']['tts_results'] != null) {
-          debugPrint('🔊 收到 TTS 音频片段');
+          _log('🔊 收到 TTS 音频片段');
           final ttsResults = data['payload']['tts_results'];
           final audioBase64 = ttsResults['audio'];
 
@@ -479,7 +486,7 @@ class XfyunRealtimeAsrService {
               // 解码 base64 音频数据
               final audioBytes = base64Decode(audioBase64);
 
-              debugPrint('🔊 TTS 音频片段大小: ${audioBytes.length} 字节');
+              _log('🔊 TTS 音频片段大小: ${audioBytes.length} 字节');
 
               // 触发 TTS 音频回调
               onTtsAudioReceived?.call(Uint8List.fromList(audioBytes));
@@ -489,18 +496,18 @@ class XfyunRealtimeAsrService {
               if (_lastSendTimeType1 != null && _lastSendTimeType2 != null) {
                 // 比较哪个类型最近发送过音频
                 audioType = _lastSendTimeType1!.isAfter(_lastSendTimeType2!) ? 1 : 2;
-                debugPrint('🎯 TTS 路由: Type $audioType (基于最后发送时间)');
+                _log('🎯 TTS 路由: Type $audioType (基于最后发送时间)');
               } else if (_lastSendTimeType2 != null) {
                 audioType = 2;
-                debugPrint('🎯 TTS 路由: Type 2 (只有类型2有发送记录)');
+                _log('🎯 TTS 路由: Type 2 (只有类型2有发送记录)');
               } else {
-                debugPrint('🎯 TTS 路由: Type 1 (默认/只有类型1有发送记录)');
+                _log('🎯 TTS 路由: Type 1 (默认/只有类型1有发送记录)');
               }
 
               // 将音频片段添加到播放队列
               _addToTtsQueue(audioBytes, type: audioType);
             } catch (e) {
-              debugPrint('解码 TTS 音频失败: $e');
+              _log('解码 TTS 音频失败: $e');
             }
           }
         }
@@ -509,13 +516,13 @@ class XfyunRealtimeAsrService {
         if (data['payload'] != null &&
             data['payload']['recognition_results'] != null &&
             data['payload']['streamtrans_results'] == null) {
-          debugPrint('⚠️ 本次响应只有识别结果，没有翻译结果');
-          debugPrint('   翻译结果通常在完整句子结束后才返回');
+          _log('⚠️ 本次响应只有识别结果，没有翻译结果');
+          _log('   翻译结果通常在完整句子结束后才返回');
         }
       }
     } catch (e) {
-      debugPrint('❌ 科大讯飞ASR: 解析消息失败: $e');
-      debugPrint('无法解析的消息内容: $message');
+      _log('❌ 科大讯飞ASR: 解析消息失败: $e');
+      _log('无法解析的消息内容: $message');
     }
   }
 
@@ -542,7 +549,7 @@ class XfyunRealtimeAsrService {
       _lastSendTimeType2 = null;
       _seqToTypeMap.clear();
       _recognitionBuffer.clear(); // 清空识别缓冲区
-      debugPrint('科大讯飞ASR: 已断开连接');
+      _log('科大讯飞ASR: 已断开连接');
     }
   }
 
@@ -564,9 +571,9 @@ class XfyunRealtimeAsrService {
     };
 
     final messageJson = jsonEncode(endFrame);
-    debugPrint('========== 科大讯飞ASR发送结束帧 ==========');
-    debugPrint('状态: 2 (最后一帧/结束)');
-    debugPrint('=========================================');
+    _log('========== 科大讯飞ASR发送结束帧 ==========');
+    _log('状态: 2 (最后一帧/结束)');
+    _log('=========================================');
 
     _wsChannel!.sink.add(messageJson);
   }
@@ -580,13 +587,13 @@ class XfyunRealtimeAsrService {
 
     // 如果 TTS 未启用，只接收音频但不播放
     if (!isEnabled) {
-      debugPrint('🔇 TTS$type 已禁用，音频已接收但不播放 (${pcmData.length} 字节)');
+      _log('🔇 TTS$type 已禁用，音频已接收但不播放 (${pcmData.length} 字节)');
       return;
     }
 
     // 验证 PCM 数据格式（应该是 16-bit, 单声道）
     if (pcmData.length % 2 != 0) {
-      debugPrint('⚠️ TTS$type 警告: PCM 数据长度不是 2 的倍数 (${pcmData.length} 字节)');
+      _log('⚠️ TTS$type 警告: PCM 数据长度不是 2 的倍数 (${pcmData.length} 字节)');
     }
 
     // 直接添加 PCM 数据到缓冲区
@@ -598,14 +605,16 @@ class XfyunRealtimeAsrService {
       bufferSize += data.length;
     }
 
-    debugPrint('🔊 TTS$type PCM 已添加: ${pcmData.length} 字节, 缓冲区: ${buffer.length} 片段, $bufferSize 字节');
+    _log('🔊 TTS$type PCM 已添加: ${pcmData.length} 字节, 缓冲区: ${buffer.length} 片段, $bufferSize 字节');
 
-    // 当缓冲区达到一定大小（约 1 秒的音频 = 32000 字节）或超过 10 个片段时，立即播放
-    if (bufferSize >= 32000 || buffer.length >= 10) {
-      debugPrint('⚡ 缓冲区已满，立即播放');
+    // 🔧 优化：增加缓冲区大小到 2.5-3 秒，减少播放卡顿
+    // 原因：更大的缓冲区可以累积更多音频数据，避免频繁的小文件播放
+    // 16kHz 16-bit 单声道 = 32000 字节/秒，80000 字节 ≈ 2.5 秒
+    if (bufferSize >= 80000 || buffer.length >= 20) {
+      _log('⚡ 缓冲区已满 ($bufferSize 字节)，立即播放');
       _flushTtsBuffer(type: type);
     } else {
-      // 否则设置定时器，200ms 后播放（更快响应）
+      // 🔧 优化：延迟时间从 200ms 增加到 500ms，让更多音频数据积累
       _scheduleTtsPlayback(type: type);
     }
   }
@@ -618,8 +627,9 @@ class XfyunRealtimeAsrService {
     // 取消之前的定时器
     _ttsTimers[type]?.cancel();
 
-    // 设置新的定时器（200ms 后播放，更快响应）
-    _ttsTimers[type] = Timer(const Duration(milliseconds: 200), () {
+    // 🔧 优化：延迟从 200ms 增加到 500ms，让更多音频数据积累
+    // 这样可以创建更大的音频文件，减少播放间隔
+    _ttsTimers[type] = Timer(const Duration(milliseconds: 500), () {
       _flushTtsBuffer(type: type);
     });
   }
@@ -646,56 +656,69 @@ class XfyunRealtimeAsrService {
       _isFlushing2 = true;
     }
 
-    // 计算总大小
-    int totalSize = 0;
-    for (final data in buffer) {
-      totalSize += data.length;
-    }
+    _log('🔧 准备处理 TTS$type 音频: ${buffer.length} 个片段');
 
-    debugPrint('🔧 合并 TTS$type 音频: ${buffer.length} 个片段, $totalSize 字节');
+    // 使用 Future.microtask 在下一个微任务中处理，避免阻塞主线程
+    Future.microtask(() async {
+      try {
+        // 计算总大小
+        int totalSize = 0;
+        for (final data in buffer) {
+          totalSize += data.length;
+        }
 
-    // 合并所有 PCM 数据
-    final mergedPcm = Uint8List(totalSize);
-    int offset = 0;
-    for (final data in buffer) {
-      mergedPcm.setRange(offset, offset + data.length, data);
-      offset += data.length;
-    }
+        _log('🔧 合并 TTS$type 音频: ${buffer.length} 个片段, $totalSize 字节');
 
-    // 清空缓冲区
-    buffer.clear();
+        // 合并所有 PCM 数据（异步）
+        final mergedPcm = Uint8List(totalSize);
+        int offset = 0;
+        for (final data in buffer) {
+          mergedPcm.setRange(offset, offset + data.length, data);
+          offset += data.length;
+          // 每合并一个片段，让出控制权
+          if (offset % 10000 == 0) {
+            await Future.delayed(const Duration(microseconds: 0));
+          }
+        }
 
-    // 转换为 WAV 格式
-    final wavData = pcmToWav(mergedPcm, sampleRate: 16000, numChannels: 1);
+        // 清空缓冲区
+        buffer.clear();
 
-    // 保存到临时文件
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final tempFile = File('${Directory.systemTemp.path}/tts${type}_$timestamp.wav');
+        // 转换为 WAV 格式
+        final wavData = pcmToWav(mergedPcm, sampleRate: 16000, numChannels: 1);
 
-    try {
-      tempFile.writeAsBytesSync(wavData);
-      paths.add(tempFile.path);
+        // 保存到临时文件（使用应用程序目录下的 temp 文件夹）
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final tempDir = Directory('temp');
+        if (!await tempDir.exists()) {
+          await tempDir.create(recursive: true);
+        }
+        final tempFile = File('${tempDir.path}/tts${type}_$timestamp.wav');
 
-      debugPrint('✅ TTS$type 音频已生成: ${tempFile.path} (${wavData.length} 字节)');
+        await tempFile.writeAsBytes(wavData);
+        paths.add(tempFile.path);
 
-      // 清除刷新标志
-      if (type == 1) {
-        _isFlushing1 = false;
-      } else {
-        _isFlushing2 = false;
+        _log('✅ TTS$type 音频已生成: ${tempFile.path} (${wavData.length} 字节)');
+
+        // 清除刷新标志
+        if (type == 1) {
+          _isFlushing1 = false;
+        } else {
+          _isFlushing2 = false;
+        }
+
+        // 开始播放（文件已准备好）
+        _playNextTts(type: type);
+      } catch (error) {
+        _log('❌ 处理 TTS$type 音频失败: $error');
+        // 清除刷新标志
+        if (type == 1) {
+          _isFlushing1 = false;
+        } else {
+          _isFlushing2 = false;
+        }
       }
-
-      // 开始播放（文件已准备好）
-      _playNextTts(type: type);
-    } catch (error) {
-      debugPrint('❌ 保存 TTS$type 音频失败: $error');
-      // 清除刷新标志
-      if (type == 1) {
-        _isFlushing1 = false;
-      } else {
-        _isFlushing2 = false;
-      }
-    }
+    });
   }
 
   /// 播放队列中的下一个 TTS 音频
@@ -707,11 +730,11 @@ class XfyunRealtimeAsrService {
     final paths = type == 1 ? _ttsFilePaths1 : _ttsFilePaths2;
     final player = type == 1 ? _ttsPlayer1 : _ttsPlayer2;
 
-    debugPrint('🎵 _playNextTts 被调用: type=$type, isEnabled=$isEnabled, 待播放文件数=${paths.length}');
+    _log('🎵 _playNextTts 被调用: type=$type, isEnabled=$isEnabled, 待播放文件数=${paths.length}');
 
     // 如果 TTS 被禁用，清空队列并停止播放
     if (!isEnabled) {
-      debugPrint('🚫 TTS$type 已禁用，清空队列');
+      _log('🚫 TTS$type 已禁用，清空队列');
       _clearTtsQueue(type: type);
       if (type == 1) {
         _isPlayingTts1 = false;
@@ -722,7 +745,7 @@ class XfyunRealtimeAsrService {
     }
 
     if (paths.isEmpty) {
-      debugPrint('✅ TTS$type 播放队列为空，播放完成');
+      _log('✅ TTS$type 播放队列为空，播放完成');
       if (type == 1) {
         _isPlayingTts1 = false;
       } else {
@@ -730,7 +753,7 @@ class XfyunRealtimeAsrService {
       }
       // 检查是否还有数据在缓冲区待处理
       if (buffer.isNotEmpty) {
-        debugPrint('⚠️ 缓冲区还有数据，刷新并播放');
+        _log('⚠️ 缓冲区还有数据，刷新并播放');
         _flushTtsBuffer(type: type);
       }
       return;
@@ -744,29 +767,22 @@ class XfyunRealtimeAsrService {
 
     final nextPath = paths.removeAt(0);
 
-    debugPrint('🔊 开始播放 TTS$type 音频: $nextPath (剩余: ${paths.length} 个文件)');
+    _log('🔊 开始播放 TTS$type 音频: $nextPath (剩余: ${paths.length} 个文件)');
 
     // 检查文件是否存在
     if (!File(nextPath).existsSync()) {
-      debugPrint('❌ TTS$type 文件不存在: $nextPath');
+      _log('❌ TTS$type 文件不存在: $nextPath');
       _playNextTts(type: type);
       return;
     }
 
-    // 检查是否有播放正在进行
-    final isPlaying = type == 1 ? _isPlayingTts1 : _isPlayingTts2;
+    _log('🎵 准备播放: path=$nextPath');
 
-    debugPrint('🎵 准备播放: path=$nextPath, 当前播放状态=$isPlaying');
-
-    // 方案1: 使用系统命令播放（Windows Media Player）
-    debugPrint('🎵 使用 Windows Media Player 播放...');
-    Process.start('powershell', ['-c', '(New-Object -ComObject WMPlayer.Player).URL="$nextPath"']);
-
-    // 方案2: 同时尝试 flutter_f2f_sound 播放器（用于测试）
+    // 使用 flutter_f2f_sound 播放器播放
     player.play(path: nextPath, volume: 1.0).then((_) {
-      debugPrint('📤 flutter_f2f_sound 播放命令已发送');
+      _log('📤 TTS$type 播放命令已发送');
     }).catchError((error) {
-      debugPrint('❌ flutter_f2f_sound 播放失败: $error');
+      _log('❌ TTS$type 播放失败: $error');
     });
 
     // 计算音频时长并等待播放完成
@@ -775,14 +791,19 @@ class XfyunRealtimeAsrService {
     final audioDataSize = fileSize - 44; // 减去 WAV 头部
     final durationMs = (audioDataSize / 32000 * 1000).ceil();
 
-    debugPrint('⏱️ TTS$type 音频时长约: ${durationMs}ms, 文件大小: $fileSize 字节');
+    _log('⏱️ TTS$type 音频时长约: ${durationMs}ms, 文件大小: $fileSize 字节');
 
     // 等待播放完成
     Future.delayed(Duration(milliseconds: durationMs + 100), () {
-      debugPrint('✅ TTS$type 批量音频播放完成');
+      _log('✅ TTS$type 批量音频播放完成');
 
-      // 暂时保留文件用于调试，不删除
-      debugPrint('📁 临时文件保留（未删除）: $nextPath');
+      // 删除已播放的临时文件
+      try {
+        File(nextPath).deleteSync();
+        _log('🗑️ 已删除临时文件: $nextPath');
+      } catch (e) {
+        _log('⚠️ 删除临时文件失败: $e');
+      }
 
       // 继续播放下一个
       _playNextTts(type: type);
@@ -804,13 +825,13 @@ class XfyunRealtimeAsrService {
       try {
         File(path).deleteSync();
       } catch (e) {
-        debugPrint('⚠️ 删除临时文件失败: $e');
+        _log('⚠️ 删除临时文件失败: $e');
       }
     }
     // 清空队列
     buffer.clear();
     paths.clear();
-    debugPrint('🗑️ TTS$type 播放队列已清空');
+    _log('🗑️ TTS$type 播放队列已清空');
   }
 
   /// 启用 TTS 播放
@@ -819,7 +840,7 @@ class XfyunRealtimeAsrService {
   void enableTts({required int type}) {
     final isEnabled = type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
 
-    debugPrint('🎛️ enableTts 被调用: type=$type, 当前状态=$isEnabled');
+    _log('🎛️ enableTts 被调用: type=$type, 当前状态=$isEnabled');
 
     if (!isEnabled) {
       if (type == 1) {
@@ -827,10 +848,10 @@ class XfyunRealtimeAsrService {
       } else {
         _isTtsEnabled2 = true;
       }
-      debugPrint('✅ TTS$type 播放已启用 - 从当前时刻开始播放 TTS 音频');
+      _log('✅ TTS$type 播放已启用 - 从当前时刻开始播放 TTS 音频');
       onTtsStateChanged?.call(type, true);
     } else {
-      debugPrint('⚠️ TTS$type 已经是启用状态，无需重复启用');
+      _log('⚠️ TTS$type 已经是启用状态，无需重复启用');
     }
   }
 
@@ -848,7 +869,7 @@ class XfyunRealtimeAsrService {
       } else {
         _isTtsEnabled2 = false;
       }
-      debugPrint('⏸️ TTS$type 播放已禁用 - 停止播放当前和后续 TTS 音频');
+      _log('⏸️ TTS$type 播放已禁用 - 停止播放当前和后续 TTS 音频');
       onTtsStateChanged?.call(type, false);
 
       // 停止当前播放
