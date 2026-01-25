@@ -1387,6 +1387,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     final newState = !state.isOneTtsEnabled;
     state = state.copyWith(isOneTtsEnabled: newState);
 
+    debugPrint('🎚️ 切换一栏 TTS: $newState');
+    debugPrint('   一栏 TTS: $newState');
+    debugPrint('   二栏 TTS: ${state.isTwoTtsEnabled}');
+
     if (newState) {
       _xfyunAsrService.enableTts(type: 1);  // 一栏 TTS
       debugPrint('✅ 一栏 TTS 播报已启用');
@@ -1400,6 +1404,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
   void toggleTwoTts() {
     final newState = !state.isTwoTtsEnabled;
     state = state.copyWith(isTwoTtsEnabled: newState);
+
+    debugPrint('🎚️ 切换二栏 TTS: $newState');
+    debugPrint('   一栏 TTS: ${state.isOneTtsEnabled}');
+    debugPrint('   二栏 TTS: $newState');
 
     if (newState) {
       _xfyunAsrService.enableTts(type: 2);  // 二栏 TTS

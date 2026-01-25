@@ -22,10 +22,21 @@ class XfyunRealtimeAsrService {
 
   // 音频序列号和状态管理
   int _audioSeq = 0;
+  int _audioSeqType1 = 0;  // 一栏音频序列号（系统声音）
+  int _audioSeqType2 = 0;  // 二栏音频序列号（录音）
+  bool _hasSentFirstMessageType1 = false;
+  bool _hasSentFirstMessageType2 = false;
   bool _hasSentFirstMessage = false;
 
   // 识别文本缓冲区（用于处理流式识别的中间结果）
   StringBuffer _recognitionBuffer = StringBuffer();
+
+  // 序列号到类型的映射（用于路由TTS响应）
+  final Map<int, int> _seqToTypeMap = {};
+
+  // 跟踪每种类型最后发送音频的时间戳（用于路由TTS响应）
+  DateTime? _lastSendTimeType1;
+  DateTime? _lastSendTimeType2;
 
   // TTS 音频播放器和缓冲队列（一栏）
   final FlutterF2fSound _ttsPlayer1 = FlutterF2fSound();
@@ -40,9 +51,6 @@ class XfyunRealtimeAsrService {
   final List<String> _ttsFilePaths2 = [];
   bool _isPlayingTts2 = false;
   bool _isTtsEnabled2 = false;  // 二栏 TTS 播放开关
-
-  // 当前音频数据类型（1=一栏/系统声音, 2=二栏/录音）
-  int _currentAudioType = 1;
 
   // 识别结果回调
   // Function(String)? onTextRecognized;
@@ -209,9 +217,6 @@ class XfyunRealtimeAsrService {
   /// 发送音频数据
   /// [type] 音频类型：1 = 一栏（系统声音）, 2 = 二栏（录音），默认为 1
   void sendAudioData(List<int> audioData, {int type = 1}) {
-    // 更新当前音频类型
-    _currentAudioType = type;
-
     if (!_isConnected || _wsChannel == null) {
       debugPrint('科大讯飞ASR: 未连接');
       return;
@@ -220,13 +225,18 @@ class XfyunRealtimeAsrService {
     // 将音频数据转换为 base64
     final base64Audio = base64Encode(audioData);
 
-    // 确定当前状态（0=第一帧, 1=中间帧, 2=最后一帧）
-    final status = _hasSentFirstMessage ? 1 : 0;
+    // 使用类型特定的序列号和状态
+    final seq = type == 1 ? _audioSeqType1 : _audioSeqType2;
+    final hasSentFirst = type == 1 ? _hasSentFirstMessageType1 : _hasSentFirstMessageType2;
+    final status = hasSentFirst ? 1 : 0;
+
+    // 记录序列号到类型的映射（用于TTS响应路由）
+    _seqToTypeMap[seq] = type;
 
     // 构建符合官方格式的消息
     Map<String, dynamic> message;
 
-    if (!_hasSentFirstMessage) {
+    if (!hasSentFirst) {
       // 第一次发送：包含完整的配置参数
       message = {
         'header': {'app_id': _appId, 'status': status},
@@ -253,12 +263,16 @@ class XfyunRealtimeAsrService {
             'audio': base64Audio,
             'encoding': 'raw',
             'sample_rate': 16000,
-            'seq': _audioSeq,
+            'seq': seq,
             'status': status,
           },
         },
       };
-      _hasSentFirstMessage = true;
+      if (type == 1) {
+        _hasSentFirstMessageType1 = true;
+      } else {
+        _hasSentFirstMessageType2 = true;
+      }
     } else {
       // 后续发送：只包含必要字段
       message = {
@@ -268,7 +282,7 @@ class XfyunRealtimeAsrService {
             'audio': base64Audio,
             'encoding': 'raw',
             'sample_rate': 16000,
-            'seq': _audioSeq,
+            'seq': seq,
             'status': status,
           },
         },
@@ -278,13 +292,30 @@ class XfyunRealtimeAsrService {
     final messageJson = jsonEncode(message);
 
     // 每100条消息打印一次状态
-    if (_audioSeq % 100 == 0 || _audioSeq < 5) {
+    if (seq % 100 == 0 || seq < 5) {
       debugPrint(
-        '📤 科大讯飞ASR发送消息 #$_audioSeq (状态: $status, 大小: ${messageJson.length} 字符)',
+        '📤 科大讯飞ASR发送消息 [type=$type] #$seq (状态: $status, 大小: ${messageJson.length} 字符)',
       );
     }
 
+    // 记录发送时间戳
+    final now = DateTime.now();
+    if (type == 1) {
+      _lastSendTimeType1 = now;
+    } else {
+      _lastSendTimeType2 = now;
+    }
+
     _wsChannel!.sink.add(messageJson);
+
+    // 增加类型特定的序列号
+    if (type == 1) {
+      _audioSeqType1++;
+    } else {
+      _audioSeqType2++;
+    }
+
+    // 同时更新全局序列号（用于兼容性）
     _audioSeq++;
   }
 
@@ -451,8 +482,21 @@ class XfyunRealtimeAsrService {
               // 触发 TTS 音频回调
               onTtsAudioReceived?.call(Uint8List.fromList(audioBytes));
 
-              // 将音频片段添加到播放队列（使用当前音频类型）
-              _addToTtsQueue(audioBytes, type: _currentAudioType);
+              // 根据最后发送时间判断TTS属于哪个类型
+              int audioType = 1;  // 默认为类型1
+              if (_lastSendTimeType1 != null && _lastSendTimeType2 != null) {
+                // 比较哪个类型最近发送过音频
+                audioType = _lastSendTimeType1!.isAfter(_lastSendTimeType2!) ? 1 : 2;
+                debugPrint('🎯 TTS 路由: Type $audioType (基于最后发送时间)');
+              } else if (_lastSendTimeType2 != null) {
+                audioType = 2;
+                debugPrint('🎯 TTS 路由: Type 2 (只有类型2有发送记录)');
+              } else {
+                debugPrint('🎯 TTS 路由: Type 1 (默认/只有类型1有发送记录)');
+              }
+
+              // 将音频片段添加到播放队列
+              _addToTtsQueue(audioBytes, type: audioType);
             } catch (e) {
               debugPrint('解码 TTS 音频失败: $e');
             }
@@ -487,7 +531,14 @@ class XfyunRealtimeAsrService {
       _wsChannel = null;
       _isConnected = false;
       _audioSeq = 0;
+      _audioSeqType1 = 0;
+      _audioSeqType2 = 0;
       _hasSentFirstMessage = false;
+      _hasSentFirstMessageType1 = false;
+      _hasSentFirstMessageType2 = false;
+      _lastSendTimeType1 = null;
+      _lastSendTimeType2 = null;
+      _seqToTypeMap.clear();
       _recognitionBuffer.clear(); // 清空识别缓冲区
       debugPrint('科大讯飞ASR: 已断开连接');
     }
@@ -638,6 +689,8 @@ class XfyunRealtimeAsrService {
   void enableTts({required int type}) {
     final isEnabled = type == 1 ? _isTtsEnabled1 : _isTtsEnabled2;
 
+    debugPrint('🎛️ enableTts 被调用: type=$type, 当前状态=$isEnabled');
+
     if (!isEnabled) {
       if (type == 1) {
         _isTtsEnabled1 = true;
@@ -646,6 +699,8 @@ class XfyunRealtimeAsrService {
       }
       debugPrint('✅ TTS$type 播放已启用 - 从当前时刻开始播放 TTS 音频');
       onTtsStateChanged?.call(type, true);
+    } else {
+      debugPrint('⚠️ TTS$type 已经是启用状态，无需重复启用');
     }
   }
 
