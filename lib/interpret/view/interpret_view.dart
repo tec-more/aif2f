@@ -8,6 +8,7 @@ import 'package:aif2f/scene/view/scene_menu.dart';
 import 'package:aif2f/user/view/user_menu.dart';
 import 'package:aif2f/scene/model/scene_model.dart';
 import 'package:aif2f/interpret/viewmodel/interpret_view_model.dart';
+import 'package:aif2f/core/config/app_config.dart';
 
 /// 传译场景页面
 @RoutePage(name: 'InterpretRoute')
@@ -963,18 +964,18 @@ class InterpretView extends ConsumerWidget {
         : state.translatedTwoText;
     final fontSize = type == 1 ? state.onefontSize : state.twofontSize;
 
-    // 将文本按逗号分隔成句子
+    // 使用特殊分隔符分割句子
     final inputSentences = inputText.isEmpty
         ? []
         : inputText
-              .split('.')
+              .split(AppConfig.sentenceSeparator)
               .map((s) => s.trim())
               .where((s) => s.isNotEmpty)
               .toList();
     final translatedSentences = translatedText.isEmpty
         ? []
         : translatedText
-              .split('.')
+              .split(AppConfig.sentenceSeparator)
               .map((s) => s.trim())
               .where((s) => s.isNotEmpty)
               .toList();

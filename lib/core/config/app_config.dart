@@ -70,14 +70,17 @@ class AppConfig {
 
   static const String volcanoWsUrl = String.fromEnvironment(
     'VOLCANO_WS_URL',
-    defaultValue: 'wss://openspeech.bytedance.com/api/v2/vop?part=&part=rtc.orc.v1',
+    defaultValue:
+        'wss://openspeech.bytedance.com/api/v2/vop?part=&part=rtc.orc.v1',
   );
 
   /// 检查火山引擎是否已配置
-  static bool get isVolcanoConfigured => volcanoAppId.isNotEmpty && volcanoAccessKey.isNotEmpty;
+  static bool get isVolcanoConfigured =>
+      volcanoAppId.isNotEmpty && volcanoAccessKey.isNotEmpty;
 
   /// 检查科大讯飞是否已配置
-  static bool get isXfyunConfigured => xFAPPID.isNotEmpty && xFAPIKey.isNotEmpty && xFAPISecret.isNotEmpty;
+  static bool get isXfyunConfigured =>
+      xFAPPID.isNotEmpty && xFAPIKey.isNotEmpty && xFAPISecret.isNotEmpty;
 
   /// ASR 服务类型选择
   /// 可选值: 'xfyun' (科大讯飞), 'volcano' (火山引擎), 'auto' (自动选择)
@@ -133,6 +136,10 @@ class AppConfig {
 
   /// 检查Azure是否已配置
   static bool get isAzureConfigured => azureSpeechKey.isNotEmpty;
+
+  /// 句子分隔符（用于区分识别的不同句子）
+  /// 使用特殊字符组合，避免与正常文本冲突
+  static const String sentenceSeparator = '|||';
 
   /// OpenAI配置(可选)
   static const String openaiApiKey = String.fromEnvironment(

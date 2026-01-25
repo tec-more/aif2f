@@ -457,9 +457,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
           );
           // 追加识别文本到状态（不覆盖已有内容）
           final currentText = state.inputOneTextOld;
-          // 如果当前文本不为空，添加空格和逗号分隔新句子
+          // 使用特殊分隔符连接句子，避免切割错误
           if (is_final == 1) {
-            final newText = currentText.isEmpty ? text : '$currentText . $text';
+            final separator = currentText.isEmpty ? '' : AppConfig.sentenceSeparator;
+            final newText = '$currentText$separator$text';
             state = state.copyWith(inputOneTextOld: newText);
             state = state.copyWith(inputOneText: newText);
           } else {
@@ -484,9 +485,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
           );
           // 追加识别文本到状态（不覆盖已有内容）
           final currentText = state.translatedOneTextOld;
-          // 如果当前文本不为空，添加空格和逗号分隔新句子
+          // 使用特殊分隔符连接句子，避免切割错误
           if (is_final == 1) {
-            final newText = currentText.isEmpty ? text : '$currentText . $text';
+            final separator = currentText.isEmpty ? '' : AppConfig.sentenceSeparator;
+            final newText = '$currentText$separator$text';
             state = state.copyWith(translatedOneTextOld: newText);
             state = state.copyWith(translatedOneText: newText);
           } else {
