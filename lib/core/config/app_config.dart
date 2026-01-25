@@ -52,6 +52,68 @@ class AppConfig {
   // 默认使用实时语音转写
   static const String xFDefaultAsrUrl = xFRealtimeAsrUrl;
 
+  /// 火山引擎配置
+  static const String volcanoAppId = String.fromEnvironment(
+    'VOLCANO_APP_ID',
+    defaultValue: '', // 需要从火山引擎控制台获取
+  );
+
+  static const String volcanoAccessKey = String.fromEnvironment(
+    'VOLCANO_ACCESS_KEY',
+    defaultValue: '', // 需要从火山引擎控制台获取
+  );
+
+  static const String volcanoUri = String.fromEnvironment(
+    'VOLCANO_URI',
+    defaultValue: 'openspeech.bytedance.com',
+  );
+
+  static const String volcanoWsUrl = String.fromEnvironment(
+    'VOLCANO_WS_URL',
+    defaultValue: 'wss://openspeech.bytedance.com/api/v2/vop?part=&part=rtc.orc.v1',
+  );
+
+  /// 检查火山引擎是否已配置
+  static bool get isVolcanoConfigured => volcanoAppId.isNotEmpty && volcanoAccessKey.isNotEmpty;
+
+  /// 检查科大讯飞是否已配置
+  static bool get isXfyunConfigured => xFAPPID.isNotEmpty && xFAPIKey.isNotEmpty && xFAPISecret.isNotEmpty;
+
+  /// ASR 服务类型选择
+  /// 可选值: 'xfyun' (科大讯飞), 'volcano' (火山引擎), 'auto' (自动选择)
+  static const String defaultAsrService = String.fromEnvironment(
+    'DEFAULT_ASR_SERVICE',
+    defaultValue: 'auto', // 默认自动选择
+  );
+
+  /// 获取最佳可用的ASR服务
+  /// 优先级: 火山引擎 > 科大讯飞
+  static String get bestAsrService {
+    if (defaultAsrService != 'auto') {
+      // 如果用户指定了服务，检查是否可用
+      if (defaultAsrService == 'volcano' && isVolcanoConfigured) {
+        return 'volcano';
+      } else if (defaultAsrService == 'xfyun' && isXfyunConfigured) {
+        return 'xfyun';
+      } else if (defaultAsrService == 'volcano') {
+        // 用户指定了火山引擎但未配置，回退到科大讯飞
+        if (isXfyunConfigured) {
+          return 'xfyun';
+        }
+      }
+    }
+
+    // 自动选择模式：优先使用火山引擎
+    if (isVolcanoConfigured) {
+      return 'volcano';
+    } else if (isXfyunConfigured) {
+      return 'xfyun';
+    }
+
+    // 都不可用时，默认科大讯飞（已配置密钥）
+    return 'xfyun';
+  }
+
   /// Azure Speech Services配置
   static const String azureSpeechKey = String.fromEnvironment(
     'AZURE_SPEECH_KEY',

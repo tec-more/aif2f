@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/interpret/model/interpret_model.dart';
 import 'package:aif2f/core/services/translation_service.dart';
 import 'package:aif2f/core/services/ai_asr.dart';
+import 'package:aif2f/core/services/volcano_asr.dart';
+import 'package:aif2f/core/config/app_config.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
 
@@ -46,6 +48,7 @@ class InterpretState {
   final String targetOneLanguage;
   final String sourceTwoLanguage;
   final String targetTwoLanguage;
+  final String asrServiceType; // 'xfyun' 或 'volcano'
 
   // final StreamSubscription<List<int>>? systemSoundCaptureStreamSubscription;
   // final int systemSoundDataLength;
@@ -79,6 +82,7 @@ class InterpretState {
     this.targetOneLanguage = '英语',
     this.sourceTwoLanguage = '英语',
     this.targetTwoLanguage = '中文',
+    this.asrServiceType = 'xfyun', // 默认使用科大讯飞
     // this.systemSoundCaptureStreamSubscription,
     // this.systemSoundDataLength = 0,
   });
@@ -110,6 +114,7 @@ class InterpretState {
     String? targetOneLanguage,
     String? sourceTwoLanguage,
     String? targetTwoLanguage,
+    String? asrServiceType,
     // StreamSubscription<List<int>>? systemSoundCaptureStreamSubscription,
     // int? systemSoundDataLength,
   }) {
@@ -140,6 +145,7 @@ class InterpretState {
       targetOneLanguage: targetOneLanguage ?? this.targetOneLanguage,
       sourceTwoLanguage: sourceTwoLanguage ?? this.sourceTwoLanguage,
       targetTwoLanguage: targetTwoLanguage ?? this.targetTwoLanguage,
+      asrServiceType: asrServiceType ?? this.asrServiceType,
       // systemSoundCaptureStreamSubscription:
       //     systemSoundCaptureStreamSubscription ??
       //     this.systemSoundCaptureStreamSubscription,
@@ -160,6 +166,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
   final FlutterF2fSound _flutterF2fSound = FlutterF2fSound();
   // 科大讯飞实时语音识别服务
   final XfyunRealtimeAsrService _xfyunAsrService = XfyunRealtimeAsrService();
+  // 火山引擎实时语音识别服务
+  VolcanoRealtimeAsrService? _volcanoAsrService;
   StreamSubscription<List<int>>? systemSoundCaptureStreamSubscription;
 
   // 音频文件输出流
@@ -203,8 +211,56 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
   @override
   InterpretState build() {
-    // 初始化状态
-    return const InterpretState();
+    // 初始化状态，使用配置的最佳ASR服务
+    final defaultService = AppConfig.bestAsrService;
+    _log('🎯 ASR服务初始化: 使用 $defaultService (配置: ${AppConfig.defaultAsrService})');
+    _log('   火山引擎: ${AppConfig.isVolcanoConfigured ? "已配置" : "未配置"}');
+    _log('   科大讯飞: ${AppConfig.isXfyunConfigured ? "已配置" : "未配置"}');
+
+    return InterpretState(asrServiceType: defaultService);
+  }
+
+  /// 获取当前 ASR 服务
+  dynamic _getCurrentAsrService() {
+    if (state.asrServiceType == 'volcano') {
+      // 检查火山引擎是否已配置
+      if (!AppConfig.isVolcanoConfigured) {
+        _log('⚠️ 火山引擎未配置，回退到科大讯飞');
+        state = state.copyWith(asrServiceType: 'xfyun');
+        return _xfyunAsrService;
+      }
+      // 懒加载火山引擎服务
+      _volcanoAsrService ??= VolcanoRealtimeAsrService(
+        appId: AppConfig.volcanoAppId,
+        accessKey: AppConfig.volcanoAccessKey,
+        uri: AppConfig.volcanoUri,
+        wsUrl: AppConfig.volcanoWsUrl,
+      );
+      return _volcanoAsrService;
+    }
+    return _xfyunAsrService;
+  }
+
+  /// 切换 ASR 服务
+  void switchAsrService(String serviceType) {
+    if (serviceType != 'xfyun' && serviceType != 'volcano') {
+      _log('❌ 无效的 ASR 服务类型: $serviceType');
+      return;
+    }
+
+    if (serviceType == 'volcano' && !AppConfig.isVolcanoConfigured) {
+      _log('⚠️ 火山引擎未配置，无法切换');
+      state = state.copyWith(
+        statusMessage: '火山引擎未配置，请检查配置文件',
+      );
+      return;
+    }
+
+    _log('🔄 切换 ASR 服务: ${state.asrServiceType} → $serviceType');
+    state = state.copyWith(
+      asrServiceType: serviceType,
+      statusMessage: '已切换到${serviceType == "xfyun" ? "科大讯飞" : "火山引擎"}',
+    );
   }
 
   /// 设置输入文本
@@ -388,10 +444,13 @@ class InterpretViewModel extends Notifier<InterpretState> {
       _asrAudioBuffer.clear();
       _lastAsrSendTime = null;
 
-      // 连接科大讯飞ASR服务（如果启用实时识别）
+      // 连接ASR服务（如果启用实时识别）
       if (_enableRealtimeAsr) {
+        final asrService = _getCurrentAsrService();
+        final serviceName = state.asrServiceType == 'volcano' ? '火山引擎' : '科大讯飞';
+
         // 先设置所有回调
-        _xfyunAsrService.onTextSrcRecognized = (text, is_final) {
+        asrService.onTextSrcRecognized = (text, is_final) {
           // 只在最终结果时更新（is_final == 1），跳过中间结果
           _log(
             ' 📝 更新前 - inputOneText: "${state.inputOneTextOld}" (${state.inputOneText.length} 字符)',
@@ -413,12 +472,13 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
           _log('   ✅ State已更新');
         };
-        _xfyunAsrService.onError = (error) {
-          _log('科大讯飞ASR错误: $error');
+        asrService.onError = (error) {
+          _log('$serviceName ASR错误: $error');
           state = state.copyWith(statusMessage: 'ASR错误: $error');
+          _isAsrConnected = false; // 标记为未连接
         };
-        _xfyunAsrService.onTextDstRecognized = (text, is_final) {
-          _log('🎉 科大讯飞ASR识别结果: "$text"');
+        asrService.onTextDstRecognized = (text, is_final) {
+          _log('🎉 $serviceName ASR识别结果: "$text"');
           _log(
             '   📝 更新前 - inputOneText: "${state.translatedOneText}" (${state.translatedOneText.length} 字符)',
           );
@@ -438,33 +498,24 @@ class InterpretViewModel extends Notifier<InterpretState> {
           );
           _log('   ✅ State已更新');
         };
-        _xfyunAsrService.onError = (error) {
-          _log('科大讯飞ASR错误: $error');
-          state = state.copyWith(statusMessage: 'ASR错误: $error');
-        };
-        _xfyunAsrService.onConnected = () {
-          _log('✅ 科大讯飞ASR已连接');
+        asrService.onConnected = () {
+          _log('✅ $serviceName ASR已连接');
           _isAsrConnected = true; // 标记为已连接
           state = state.copyWith(statusMessage: 'ASR已连接，正在识别...');
         };
-        _xfyunAsrService.onDisconnected = () {
-          _log('科大讯飞ASR已断开');
-          _isAsrConnected = false; // 标记为未连接
-        };
-        _xfyunAsrService.onError = (error) {
-          _log('科大讯飞ASR错误: $error');
-          state = state.copyWith(statusMessage: 'ASR错误: $error');
+        asrService.onDisconnected = () {
+          _log('$serviceName ASR已断开');
           _isAsrConnected = false; // 标记为未连接
         };
 
         // 等待连接成功
-        final connected = await _xfyunAsrService.connect();
+        final connected = await asrService.connect();
         if (!connected) {
-          _log('❌ 科大讯飞ASR连接失败');
+          _log('❌ $serviceName ASR连接失败');
           state = state.copyWith(statusMessage: 'ASR连接失败，仅保存音频文件');
           _isAsrConnected = false;
         } else {
-          _log('✅ 科大讯飞ASR连接成功');
+          _log('✅ $serviceName ASR连接成功');
           _isAsrConnected = true;
         }
       }
@@ -608,8 +659,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
               // 从缓冲区移除已发送的数据
               _asrAudioBuffer.removeRange(0, _asrChunkSize);
 
-              // 发送到科大讯飞（一栏 = 系统声音）
-              _xfyunAsrService.sendAudioData(chunkToSend, type: 1);
+              // 发送到ASR服务（一栏 = 系统声音）
+              _getCurrentAsrService().sendAudioData(chunkToSend, type: 1);
 
               // 🔍 调试：打印发送信息（每50次打印一次）
               // final now = DateTime.now();
@@ -637,13 +688,13 @@ class InterpretViewModel extends Notifier<InterpretState> {
           await _audioFileSink?.close();
           _audioFileSink = null;
           if (_enableRealtimeAsr) {
-            await _xfyunAsrService.disconnect();
+            await _getCurrentAsrService().disconnect();
           }
         },
         onDone: () async {
           _log('System sound capture done');
           if (_enableRealtimeAsr) {
-            await _xfyunAsrService.disconnect();
+            await _getCurrentAsrService().disconnect();
           }
           // 关闭写入流并更新文件头
           await _finalizeAudioFile();
@@ -1144,13 +1195,13 @@ class InterpretViewModel extends Notifier<InterpretState> {
       // 🔧 发送缓冲区剩余的音频数据
       if (_enableRealtimeAsr && _isAsrConnected && _asrAudioBuffer.isNotEmpty) {
         _log('🎤 发送剩余缓冲数据: ${_asrAudioBuffer.length}字节');
-        _xfyunAsrService.sendAudioData(List.from(_asrAudioBuffer), type: 1);
+        _getCurrentAsrService().sendAudioData(List.from(_asrAudioBuffer), type: 1);
         _asrAudioBuffer.clear();
       }
 
-      // 断开科大讯飞ASR连接
+      // 断开ASR连接
       if (_enableRealtimeAsr) {
-        await _xfyunAsrService.disconnect();
+        await _getCurrentAsrService().disconnect();
       }
 
       // 取消系统声音捕获订阅
@@ -1237,10 +1288,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     _log('   二栏 TTS: ${state.isTwoTtsEnabled}');
 
     if (newState) {
-      _xfyunAsrService.enableTts(type: 1);  // 一栏 TTS
+      _getCurrentAsrService().enableTts(type: 1);  // 一栏 TTS
       _log('✅ 一栏 TTS 播报已启用');
     } else {
-      _xfyunAsrService.disableTts(type: 1);  // 一栏 TTS
+      _getCurrentAsrService().disableTts(type: 1);  // 一栏 TTS
       _log('⏸️ 一栏 TTS 播报已禁用');
     }
   }
@@ -1255,10 +1306,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     _log('   二栏 TTS: $newState');
 
     if (newState) {
-      _xfyunAsrService.enableTts(type: 2);  // 二栏 TTS
+      _getCurrentAsrService().enableTts(type: 2);  // 二栏 TTS
       _log('✅ 二栏 TTS 播报已启用');
     } else {
-      _xfyunAsrService.disableTts(type: 2);  // 二栏 TTS
+      _getCurrentAsrService().disableTts(type: 2);  // 二栏 TTS
       _log('⏸️ 二栏 TTS 播报已禁用');
     }
   }
