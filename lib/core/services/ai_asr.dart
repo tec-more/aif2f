@@ -668,29 +668,15 @@ class XfyunRealtimeAsrService {
     // 转换为 WAV 格式
     final wavData = pcmToWav(mergedPcm, sampleRate: 16000, numChannels: 1);
 
-    // 保存到当前目录下的 sounds/ttl 文件夹
+    // 保存到临时文件
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final currentDir = Directory.current.path;
-    final ttsDir = Directory('$currentDir/sounds/ttl');
-
-    // 确保目录存在
-    if (!ttsDir.existsSync()) {
-      ttsDir.createSync(recursive: true);
-      debugPrint('📁 创建目录: ${ttsDir.path}');
-    }
-
-    final tempFile = File('${ttsDir.path}/tts${type}_$timestamp.wav');
+    final tempFile = File('${Directory.systemTemp.path}/tts${type}_$timestamp.wav');
 
     try {
       tempFile.writeAsBytesSync(wavData);
       paths.add(tempFile.path);
 
-      // 验证文件
-      final exists = tempFile.existsSync();
-      final size = tempFile.lengthSync();
-
-      debugPrint('✅ TTS$type 音频已保存: ${tempFile.path}');
-      debugPrint('   文件存在: $exists, 大小: $size 字节, 预期: ${wavData.length} 字节');
+      debugPrint('✅ TTS$type 音频已生成: ${tempFile.path} (${wavData.length} 字节)');
 
       // 清除刷新标志
       if (type == 1) {
