@@ -598,19 +598,17 @@ class InterpretViewModel extends Notifier<InterpretState> {
               _xfyunAsrService.sendAudioData(chunkToSend);
 
               // 🔍 调试：打印发送信息（每50次打印一次）
-              if (_audioChunkCount % 50 == 0) {
-                final now = DateTime.now();
-                if (_lastAsrSendTime != null) {
-                  final interval = now
-                      .difference(_lastAsrSendTime!)
-                      .inMilliseconds;
-                  debugPrint('🎤 ASR发送统计:');
-                  debugPrint('   本次发送: ${chunkToSend.length}字节 (目标=1280字节)');
-                  debugPrint('   发送间隔: ${interval}ms (目标=40ms)');
-                  debugPrint('   缓冲区剩余: ${_asrAudioBuffer.length}字节');
-                }
-                _lastAsrSendTime = now;
-              }
+              // final now = DateTime.now();
+              // if (_lastAsrSendTime != null) {
+              //   final interval = now
+              //       .difference(_lastAsrSendTime!)
+              //       .inMilliseconds;
+              //   debugPrint('🎤 ASR发送统计:');
+              //   debugPrint('   本次发送: ${chunkToSend.length}字节 (目标=1280字节)');
+              //   debugPrint('   发送间隔: ${interval}ms (目标=40ms)');
+              //   debugPrint('   缓冲区剩余: ${_asrAudioBuffer.length}字节');
+              // }
+              // _lastAsrSendTime = now;
             }
           } else if (_enableRealtimeAsr && !_isAsrConnected) {
             // 每50次打印一次警告
