@@ -380,7 +380,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
         _xfyunAsrService.onTextSrcRecognized = (text, is_final) {
           // 只在最终结果时更新（is_final == 1），跳过中间结果
           debugPrint(
-            '   📝 更新前 - inputOneText: "${state.inputOneTextOld}" (${state.inputOneText.length} 字符)',
+            ' 📝 更新前 - inputOneText: "${state.inputOneTextOld}" (${state.inputOneText.length} 字符)',
           );
           // 追加识别文本到状态（不覆盖已有内容）
           final currentText = state.inputOneTextOld;
@@ -500,10 +500,16 @@ class InterpretViewModel extends Notifier<InterpretState> {
             debugPrint('   输入数据: ${audioData.length} 字节');
             debugPrint('   输入帧数: ${audioData.length ~/ 8} 帧');
 
-            final leftBits = (audioData[3] << 24) | (audioData[2] << 16) |
-                            (audioData[1] << 8) | audioData[0];
-            final rightBits = (audioData[7] << 24) | (audioData[6] << 16) |
-                             (audioData[5] << 8) | audioData[4];
+            final leftBits =
+                (audioData[3] << 24) |
+                (audioData[2] << 16) |
+                (audioData[1] << 8) |
+                audioData[0];
+            final rightBits =
+                (audioData[7] << 24) |
+                (audioData[6] << 16) |
+                (audioData[5] << 8) |
+                audioData[4];
             final leftValue = _ieee754BitsToFloat(leftBits);
             final rightValue = _ieee754BitsToFloat(rightBits);
 
@@ -521,12 +527,18 @@ class InterpretViewModel extends Notifier<InterpretState> {
             int zeroCount = 0;
 
             for (int i = 0; i < audioData.length && i < 4800; i += 8) {
-              final leftBits = (audioData[i + 3] << 24) | (audioData[i + 2] << 16) |
-                              (audioData[i + 1] << 8) | audioData[i];
+              final leftBits =
+                  (audioData[i + 3] << 24) |
+                  (audioData[i + 2] << 16) |
+                  (audioData[i + 1] << 8) |
+                  audioData[i];
               final leftValue = _ieee754BitsToFloat(leftBits);
 
-              final rightBits = (audioData[i + 7] << 24) | (audioData[i + 6] << 16) |
-                               (audioData[i + 5] << 8) | audioData[i + 4];
+              final rightBits =
+                  (audioData[i + 7] << 24) |
+                  (audioData[i + 6] << 16) |
+                  (audioData[i + 5] << 8) |
+                  audioData[i + 4];
               final rightValue = _ieee754BitsToFloat(rightBits);
 
               final mixedValue = (leftValue + rightValue) / 2.0;
@@ -542,8 +554,12 @@ class InterpretViewModel extends Notifier<InterpretState> {
             debugPrint('🎊 音频范围统计 (基于 $sampleCount 个样本):');
             debugPrint('   最大值: $maxValue');
             debugPrint('   最小值: $minValue');
-            debugPrint('   峰值幅度: ${maxValue.abs() > minValue.abs() ? maxValue.abs() : minValue.abs()}');
-            debugPrint('   静音比例: ${zeroRatio.toStringAsFixed(1)}% ($zeroCount/$sampleCount)');
+            debugPrint(
+              '   峰值幅度: ${maxValue.abs() > minValue.abs() ? maxValue.abs() : minValue.abs()}',
+            );
+            debugPrint(
+              '   静音比例: ${zeroRatio.toStringAsFixed(1)}% ($zeroCount/$sampleCount)',
+            );
 
             if (zeroRatio > 90) {
               debugPrint('   ⚠️ 警告：音频几乎是静音！');
@@ -585,7 +601,9 @@ class InterpretViewModel extends Notifier<InterpretState> {
               if (_audioChunkCount % 50 == 0) {
                 final now = DateTime.now();
                 if (_lastAsrSendTime != null) {
-                  final interval = now.difference(_lastAsrSendTime!).inMilliseconds;
+                  final interval = now
+                      .difference(_lastAsrSendTime!)
+                      .inMilliseconds;
                   debugPrint('🎤 ASR发送统计:');
                   debugPrint('   本次发送: ${chunkToSend.length}字节 (目标=1280字节)');
                   debugPrint('   发送间隔: ${interval}ms (目标=40ms)');
@@ -633,7 +651,9 @@ class InterpretViewModel extends Notifier<InterpretState> {
   Future<void> _writeWavHeader(IOSink sink) async {
     // WAV 文件头结构
     // 🔧 科大讯飞要求：16kHz单声道，不损失质量
-    final sampleRate = _outputAsPcm16 ? 16000 : 48000; // PCM-16用16kHz，Float保持48kHz
+    final sampleRate = _outputAsPcm16
+        ? 16000
+        : 48000; // PCM-16用16kHz，Float保持48kHz
     final numChannels = _outputAsPcm16 ? 1 : 2; // PCM-16用单声道，Float用立体声
     final bitsPerSample = _outputAsPcm16 ? 16 : 32; // 位深度
     final audioFormat = _outputAsPcm16 ? 1 : 3; // 1 = PCM, 3 = IEEE Float
@@ -718,21 +738,24 @@ class InterpretViewModel extends Notifier<InterpretState> {
       final sampleStartIndex = i * 8;
       if (sampleStartIndex + 7 < floatData.length) {
         // 左声道
-        final leftBits = (floatData[sampleStartIndex + 3] << 24) |
-                        (floatData[sampleStartIndex + 2] << 16) |
-                        (floatData[sampleStartIndex + 1] << 8) |
-                        floatData[sampleStartIndex];
+        final leftBits =
+            (floatData[sampleStartIndex + 3] << 24) |
+            (floatData[sampleStartIndex + 2] << 16) |
+            (floatData[sampleStartIndex + 1] << 8) |
+            floatData[sampleStartIndex];
         final leftValue = _ieee754BitsToFloat(leftBits);
 
         // 右声道
-        final rightBits = (floatData[sampleStartIndex + 7] << 24) |
-                         (floatData[sampleStartIndex + 6] << 16) |
-                         (floatData[sampleStartIndex + 5] << 8) |
-                         floatData[sampleStartIndex + 4];
+        final rightBits =
+            (floatData[sampleStartIndex + 7] << 24) |
+            (floatData[sampleStartIndex + 6] << 16) |
+            (floatData[sampleStartIndex + 5] << 8) |
+            floatData[sampleStartIndex + 4];
         final rightValue = _ieee754BitsToFloat(rightBits);
 
         // 🔧 功率守恒的立体声转单声道混合
-        final mixedValue = (leftValue + rightValue) / 2.0 * stereoToMonoCompensation;
+        final mixedValue =
+            (leftValue + rightValue) / 2.0 * stereoToMonoCompensation;
 
         monoData.add(mixedValue);
 
@@ -748,11 +771,12 @@ class InterpretViewModel extends Notifier<InterpretState> {
     final rmsAmplitude = sqrt(rmsSum / monoData.length);
 
     // 步骤2: 自适应增益控制
+    // 🔧 针对弱信号优化：提高最大增益到 20.0，以应对系统声音捕获电平低的情况
     // 目标：使峰值达到 PCM-16 的 90% 量程（0.9），避免削波
     // 同时考虑 RMS 电平，避免过度放大噪音
-    const targetPeak = 0.9;  // 目标峰值（留10%余量）
-    const minGain = 1.0;     // 最小增益（不衰减）
-    const maxGain = 5.0;     // 最大增益（避免过度放大噪音）
+    const targetPeak = 0.9; // 目标峰值（留10%余量）
+    const minGain = 1.0; // 最小增益（不衰减）
+    const maxGain = 20.0; // 最大增益（提高到20x以应对弱信号）
 
     double adaptiveGain;
     if (peakAmplitude > 0.001) {
@@ -760,7 +784,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
       final peakBasedGain = targetPeak / peakAmplitude;
 
       // 基于RMS的增益调整（防止过度放大噪音）
-      final rmsBasedGain = rmsAmplitude > 0.01 ? 0.5 / rmsAmplitude : maxGain;
+      // 🔧 对于极弱信号（RMS < 0.005），放宽RMS限制
+      final rmsBasedGain = rmsAmplitude > 0.005 ? 0.5 / rmsAmplitude : maxGain;
 
       // 组合增益（取较小值，优先防止削波）
       adaptiveGain = min(peakBasedGain, rmsBasedGain).clamp(minGain, maxGain);
@@ -771,6 +796,13 @@ class InterpretViewModel extends Notifier<InterpretState> {
         debugPrint('   峰值: $peakAmplitude');
         debugPrint('   RMS: $rmsAmplitude');
         debugPrint('   应用增益: $adaptiveGain');
+        debugPrint(
+          '   信号强度评估: ${peakAmplitude < 0.01
+              ? "弱"
+              : peakAmplitude < 0.05
+              ? "中等"
+              : "强"}',
+        );
       }
     } else {
       adaptiveGain = 1.0;
@@ -793,20 +825,30 @@ class InterpretViewModel extends Notifier<InterpretState> {
       debugPrint('   旁瓣衰减: >80dB');
       debugPrint('   自适应增益: $adaptiveGain');
 
-      final leftBits = (floatData[3] << 24) | (floatData[2] << 16) |
-                      (floatData[1] << 8) | floatData[0];
-      final rightBits = (floatData[7] << 24) | (floatData[6] << 16) |
-                       (floatData[5] << 8) | floatData[4];
+      final leftBits =
+          (floatData[3] << 24) |
+          (floatData[2] << 16) |
+          (floatData[1] << 8) |
+          floatData[0];
+      final rightBits =
+          (floatData[7] << 24) |
+          (floatData[6] << 16) |
+          (floatData[5] << 8) |
+          floatData[4];
       final leftValue = _ieee754BitsToFloat(leftBits);
       final rightValue = _ieee754BitsToFloat(rightBits);
 
       debugPrint('🎵 原始音频值:');
       debugPrint('   左声道: $leftValue');
       debugPrint('   右声道: $rightValue');
-      debugPrint('   混合后: ${(leftValue + rightValue) / 2.0 * stereoToMonoCompensation}');
+      debugPrint(
+        '   混合后: ${(leftValue + rightValue) / 2.0 * stereoToMonoCompensation}',
+      );
       debugPrint('   峰值: $peakAmplitude');
       debugPrint('   RMS: $rmsAmplitude');
-      debugPrint('   重采样后: ${resampledData.isNotEmpty ? resampledData[0] : 0.0}');
+      debugPrint(
+        '   重采样后: ${resampledData.isNotEmpty ? resampledData[0] : 0.0}',
+      );
     }
 
     // 🔍 诊断2：统计音频范围（第10个数据块）
@@ -831,7 +873,9 @@ class InterpretViewModel extends Notifier<InterpretState> {
       debugPrint('   最小值: $minValue');
       debugPrint('   峰值幅度: $peakAmplitude');
       debugPrint('   RMS: $rmsAmplitude');
-      debugPrint('   静音比例: ${zeroRatio.toStringAsFixed(1)}% ($zeroCount/$sampleCount)');
+      debugPrint(
+        '   静音比例: ${zeroRatio.toStringAsFixed(1)}% ($zeroCount/$sampleCount)',
+      );
       debugPrint('   自适应增益: $adaptiveGain');
 
       if (zeroRatio > 90) {
@@ -845,8 +889,8 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
     // 预计算软限幅函数的参数
     // 使用双曲正切函数实现软限幅，避免硬削波
-    final softLimitKnee = 0.8;  // 软限幅起点
-    final random = Random(42);   // 固定种子的随机数生成器，用于抖动
+    final softLimitKnee = 0.8; // 软限幅起点
+    final random = Random(42); // 固定种子的随机数生成器，用于抖动
 
     // 步骤4-5: 应用自适应增益、软限幅并转换为 PCM-16
     for (int i = 0; i < resampledData.length; i++) {
@@ -858,9 +902,14 @@ class InterpretViewModel extends Notifier<InterpretState> {
       // 软限幅（避免削波失真）
       // 使用 tanh 函数实现平滑的软限幅
       final softLimitedValue = amplifiedValue.abs() <= softLimitKnee
-          ? amplifiedValue  // 线性区
-          : (amplifiedValue.sign * (softLimitKnee +
-              (1.0 - softLimitKnee) * _tanh((amplifiedValue.abs() - softLimitKnee) / (1.0 - softLimitKnee))));
+          ? amplifiedValue // 线性区
+          : (amplifiedValue.sign *
+                (softLimitKnee +
+                    (1.0 - softLimitKnee) *
+                        _tanh(
+                          (amplifiedValue.abs() - softLimitKnee) /
+                              (1.0 - softLimitKnee),
+                        )));
 
       // 转换为 PCM-16（带TPDF抖动，减少量化误差）
       final dither = (random.nextDouble() - random.nextDouble()) / 32767.0;
@@ -880,7 +929,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// 双曲正切函数（用于软限幅）
   /// tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
   double _tanh(double x) {
-    if (x > 10) return 1.0;  // 避免溢出
+    if (x > 10) return 1.0; // 避免溢出
     if (x < -10) return -1.0;
     final expX = exp(x);
     final expNegX = exp(-x);
@@ -895,18 +944,25 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// - downsampleFactor: 降采样因子（3 表示 48kHz → 16kHz）
   ///
   /// 返回：重采样后的音频数据（16kHz）
-  List<double> _soxrQualityResample(List<double> inputData, int downsampleFactor) {
+  List<double> _soxrQualityResample(
+    List<double> inputData,
+    int downsampleFactor,
+  ) {
     // ==================== SOXR级滤波器设计 ====================
     // 1. Kaiser 窗参数（比 Hamming 窗更好的旁瓣衰减）
     // 2. 97抽头FIR滤波器（比31抽头更陡峭的截止）
     // 3. 多相位滤波器结构（提高效率）
 
-    const int filterTaps = 97;  // SOXR默认使用的高抽头数
-    const double kaiserBeta = 8.0;  // Kaiser窗形状参数（提供>80dB旁瓣衰减）
-    final double cutoffRatio = 1.0 / downsampleFactor;  // 截止频率比例
+    const int filterTaps = 97; // SOXR默认使用的高抽头数
+    const double kaiserBeta = 8.0; // Kaiser窗形状参数（提供>80dB旁瓣衰减）
+    final double cutoffRatio = 1.0 / downsampleFactor; // 截止频率比例
 
     // 获取或计算滤波器系数
-    final coefficients = _getKaiserFirCoefficients(filterTaps, cutoffRatio, kaiserBeta);
+    final coefficients = _getKaiserFirCoefficients(
+      filterTaps,
+      cutoffRatio,
+      kaiserBeta,
+    );
 
     // 多相位滤波器下采样
     final outputData = <double>[];
