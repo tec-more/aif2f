@@ -9,6 +9,7 @@ import 'package:aif2f/user/view/user_menu.dart';
 import 'package:aif2f/scene/model/scene_model.dart';
 import 'package:aif2f/interpret/viewmodel/interpret_view_model.dart';
 import 'package:aif2f/core/config/app_config.dart';
+import 'package:aif2f/interpret/widgets/auto_scroll_translation_view.dart';
 
 /// 传译场景页面
 @RoutePage(name: 'InterpretRoute')
@@ -965,14 +966,14 @@ class InterpretView extends ConsumerWidget {
     final fontSize = type == 1 ? state.onefontSize : state.twofontSize;
 
     // 使用特殊分隔符分割句子
-    final inputSentences = inputText.isEmpty
+    final List<String> inputSentences = inputText.isEmpty
         ? []
         : inputText
               .split(AppConfig.sentenceSeparator)
               .map((s) => s.trim())
               .where((s) => s.isNotEmpty)
               .toList();
-    final translatedSentences = translatedText.isEmpty
+    final List<String> translatedSentences = translatedText.isEmpty
         ? []
         : translatedText
               .split(AppConfig.sentenceSeparator)
@@ -1043,52 +1044,17 @@ class InterpretView extends ConsumerWidget {
           padding: EdgeInsets.all(
             MediaQuery.of(context).size.width < 600 ? 12 : 24,
           ),
-          child: SingleChildScrollView(
-            child: inputSentences.isEmpty && translatedSentences.isEmpty
-                ? Center(
-                    child: TextField(
-                      controller:
-                          TextEditingController(
-                              text: type == 1
-                                  ? state.inputOneText
-                                  : state.inputTwoText,
-                            )
-                            ..selection = TextSelection.fromPosition(
-                              TextPosition(
-                                offset: type == 1
-                                    ? state.inputOneText.length
-                                    : state.inputTwoText.length,
-                              ),
-                            ),
-                      onChanged: (text) {
-                        ref
-                            .read(interpretViewModelProvider.notifier)
-                            .setInputText(text, type);
-                      },
-                      onSubmitted: (text) {
-                        ref
-                            .read(interpretViewModelProvider.notifier)
-                            .translateText(text, type);
-                      },
-                      maxLines: null,
-                      textAlignVertical: TextAlignVertical.top,
-                      decoration: InputDecoration(
-                        hintText: '源语言/目标语言',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        hintStyle: TextStyle(fontSize: fontSize),
-                      ),
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        color: Colors.black87,
-                        height: 1.5,
-                      ),
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: allLines,
-                  ),
+          child: AutoScrollTranslationView(
+            sourceSentences: inputSentences,
+            targetSentences: translatedSentences,
+            fontSize: fontSize,
+            initialText: type == 1 ? state.inputOneText : state.inputTwoText,
+            onChanged: (text) {
+              ref.read(interpretViewModelProvider.notifier).setInputText(text, type);
+            },
+            onSubmitted: (text) {
+              ref.read(interpretViewModelProvider.notifier).translateText(text, type);
+            },
           ),
         ),
       ),
