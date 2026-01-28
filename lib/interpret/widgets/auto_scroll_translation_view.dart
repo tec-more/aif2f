@@ -9,14 +9,19 @@ import 'package:flutter/material.dart';
 class AutoScrollTranslationView extends StatefulWidget {
   /// 原文句子列表
   final List<String> sourceSentences;
+
   /// 译文句子列表
   final List<String> targetSentences;
+
   /// 字体大小
   final double fontSize;
+
   /// 初始文本
   final String? initialText;
+
   /// 文本变化回调
   final ValueChanged<String>? onChanged;
+
   /// 文本提交回调
   final ValueChanged<String>? onSubmitted;
 
@@ -31,7 +36,8 @@ class AutoScrollTranslationView extends StatefulWidget {
   });
 
   @override
-  State<AutoScrollTranslationView> createState() => _AutoScrollTranslationViewState();
+  State<AutoScrollTranslationView> createState() =>
+      _AutoScrollTranslationViewState();
 }
 
 class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
@@ -44,11 +50,10 @@ class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    _lastSentenceCount = widget.sourceSentences.length + widget.targetSentences.length;
+    _lastSentenceCount =
+        widget.sourceSentences.length + widget.targetSentences.length;
     // 初始化文本控制器
-    _textController = TextEditingController(
-      text: widget.initialText ?? '',
-    );
+    _textController = TextEditingController(text: widget.initialText ?? '');
   }
 
   @override
@@ -65,20 +70,20 @@ class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
     }
 
     // 检测是否有新句子
-    final currentCount = widget.sourceSentences.length + widget.targetSentences.length;
+    final currentCount =
+        widget.sourceSentences.length + widget.targetSentences.length;
     final hasNewSentences = currentCount > _lastSentenceCount;
     _lastSentenceCount = currentCount;
 
     // 如果有新句子且用户没有在手动滚动，则自动滚动到底部
     if (hasNewSentences && !_isUserScrolling && mounted) {
+      // 等待两个帧完成，确保布局完全稳定
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients && !_isUserScrolling) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        });
       });
     }
   }
@@ -92,7 +97,8 @@ class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
 
   void _handleUserScroll(ScrollNotification notification) {
     // 判断是否应该恢复自动滚动
-    final isAtBottom = _scrollController.position.pixels >=
+    final isAtBottom =
+        _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 50;
 
     if (isAtBottom) {
@@ -112,7 +118,8 @@ class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
     // 构建显示的行
     final List<Widget> lines = [];
 
-    final maxPairs = widget.sourceSentences.length > widget.targetSentences.length
+    final maxPairs =
+        widget.sourceSentences.length > widget.targetSentences.length
         ? widget.sourceSentences.length
         : widget.targetSentences.length;
 
@@ -169,6 +176,7 @@ class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
       },
       child: SingleChildScrollView(
         controller: _scrollController,
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: !_hasContent
             ? Center(
                 child: TextField(
@@ -180,7 +188,7 @@ class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
                   decoration: InputDecoration(
                     hintText: '源语言/目标语言',
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
                     hintStyle: TextStyle(fontSize: widget.fontSize),
                   ),
                   style: TextStyle(
@@ -221,10 +229,12 @@ class AutoScrollTranslationViewOptimized extends StatefulWidget {
   });
 
   @override
-  State<AutoScrollTranslationViewOptimized> createState() => _AutoScrollTranslationViewOptimizedState();
+  State<AutoScrollTranslationViewOptimized> createState() =>
+      _AutoScrollTranslationViewOptimizedState();
 }
 
-class _AutoScrollTranslationViewOptimizedState extends State<AutoScrollTranslationViewOptimized> {
+class _AutoScrollTranslationViewOptimizedState
+    extends State<AutoScrollTranslationViewOptimized> {
   final ScrollController _scrollController = ScrollController();
   bool _isUserScrolling = false;
   int _lastSentenceCount = 0;
@@ -233,7 +243,8 @@ class _AutoScrollTranslationViewOptimizedState extends State<AutoScrollTranslati
   @override
   void initState() {
     super.initState();
-    _lastSentenceCount = widget.sourceSentences.length + widget.targetSentences.length;
+    _lastSentenceCount =
+        widget.sourceSentences.length + widget.targetSentences.length;
     _textController = TextEditingController(text: widget.initialText ?? '');
   }
 
@@ -250,19 +261,20 @@ class _AutoScrollTranslationViewOptimizedState extends State<AutoScrollTranslati
       );
     }
 
-    final currentCount = widget.sourceSentences.length + widget.targetSentences.length;
+    final currentCount =
+        widget.sourceSentences.length + widget.targetSentences.length;
     final hasNewSentences = currentCount > _lastSentenceCount;
     _lastSentenceCount = currentCount;
 
+    // 如果有新句子且用户没有在手动滚动，则自动滚动到底部
     if (hasNewSentences && !_isUserScrolling && mounted) {
+      // 等待两个帧完成，确保布局完全稳定
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients && !_isUserScrolling) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        });
       });
     }
   }
@@ -278,7 +290,8 @@ class _AutoScrollTranslationViewOptimizedState extends State<AutoScrollTranslati
       widget.sourceSentences.isNotEmpty || widget.targetSentences.isNotEmpty;
 
   int get _itemCount {
-    final maxPairs = widget.sourceSentences.length > widget.targetSentences.length
+    final maxPairs =
+        widget.sourceSentences.length > widget.targetSentences.length
         ? widget.sourceSentences.length
         : widget.targetSentences.length;
     return maxPairs * 2; // 每个pair有2行
@@ -330,7 +343,8 @@ class _AutoScrollTranslationViewOptimizedState extends State<AutoScrollTranslati
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollNotification) {
         if (scrollNotification is ScrollUpdateNotification) {
-          final isAtBottom = _scrollController.position.pixels >=
+          final isAtBottom =
+              _scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent - 50;
 
           if (isAtBottom) {
@@ -347,6 +361,7 @@ class _AutoScrollTranslationViewOptimizedState extends State<AutoScrollTranslati
       },
       child: ListView.builder(
         controller: _scrollController,
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
         itemCount: !_hasContent && _itemCount == 0 ? 1 : _itemCount,
         itemBuilder: (context, index) {
           if (!_hasContent && _itemCount == 0) {
@@ -360,7 +375,7 @@ class _AutoScrollTranslationViewOptimizedState extends State<AutoScrollTranslati
                 decoration: InputDecoration(
                   hintText: '源语言/目标语言',
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
                   hintStyle: TextStyle(fontSize: widget.fontSize),
                 ),
                 style: TextStyle(
