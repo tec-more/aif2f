@@ -510,6 +510,20 @@ class InterpretViewModel extends Notifier<InterpretState> {
           _isAsrConnected = false; // 标记为未连接
         };
 
+        // 🔧 设置讯飞API的语言配置（一栏：系统声音）
+        if (asrService is XfyunRealtimeAsrService) {
+          try {
+            (asrService as XfyunRealtimeAsrService).setLanguageConfig(
+              sourceLanguage: state.sourceOneLanguage,
+              targetLanguage: state.targetOneLanguage,
+              type: 1, // 一栏
+            );
+          } catch (e) {
+            _log('⚠️ 设置一栏语言配置失败: $e');
+            // 继续执行，使用默认配置
+          }
+        }
+
         // 等待连接成功
         final connected = await asrService.connect();
         if (!connected) {

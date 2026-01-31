@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:aif2f/core/config/app_config.dart';
+import 'package:aif2f/core/config/language_mapping.dart';
 import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
@@ -61,6 +62,10 @@ class XfyunRealtimeAsrService {
   bool _isTtsEnabled2 = false;  // 二栏 TTS 播放开关
   bool _isFlushing2 = false;  // 防止重复刷新
 
+  // 语言配置（一栏和二栏分别独立配置）
+  XfyunLanguageConfig? _languageConfigType1;  // 一栏语言配置
+  XfyunLanguageConfig? _languageConfigType2;  // 二栏语言配置
+
   // 识别结果回调
   // Function(String)? onTextRecognized;
   Function(String, int)? onTextDstRecognized;
@@ -85,6 +90,45 @@ class XfyunRealtimeAsrService {
     _log('  APIKey: ${_apiKey.substring(0, 8)}...');
     _log('  APISecret: ${_apiSecret.substring(0, 8)}...');
     _log('  URL: $_wsUrl');
+  }
+
+  /// 设置语言配置
+  /// [sourceLanguage] 源语言（如："中文"、"英语"）
+  /// [targetLanguage] 目标语言（如："英语"、"中文"）
+  /// [type] 栏目类型：1 = 一栏（系统声音）, 2 = 二栏（录音）
+  void setLanguageConfig({
+    required String sourceLanguage,
+    required String targetLanguage,
+    required int type,
+  }) {
+    try {
+      final config = XfyunLanguageConfig(
+        sourceLanguage: sourceLanguage,
+        targetLanguage: targetLanguage,
+      );
+
+      if (type == 1) {
+        _languageConfigType1 = config;
+        _log('✅ 一栏语言配置已更新: $config');
+      } else {
+        _languageConfigType2 = config;
+        _log('✅ 二栏语言配置已更新: $config');
+      }
+    } catch (e) {
+      _log('❌ 语言配置失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 获取语言配置（如果未设置则返回默认配置）
+  XfyunLanguageConfig _getLanguageConfig(int type) {
+    final config = type == 1 ? _languageConfigType1 : _languageConfigType2;
+
+    // 如果未设置，使用默认配置（中文→英文）
+    return config ?? XfyunLanguageConfig(
+      sourceLanguage: XfyunLanguages.chinese,
+      targetLanguage: XfyunLanguages.english,
+    );
   }
 
   /// 生成科大讯飞 API 鉴权参数（按照官方文档）
@@ -247,18 +291,24 @@ class XfyunRealtimeAsrService {
 
     if (!hasSentFirst) {
       // 第一次发送：包含完整的配置参数
+      // 获取当前类型的语言配置
+      final langConfig = _getLanguageConfig(type);
+
       message = {
         'header': {'app_id': _appId, 'status': status},
         'parameter': {
           'ist': {
-            'language': 'zh_cn',
-            'language_type': 1,
-            'domain': 'ist_ed_open',
-            'accent': 'mandarin',
+            'language': langConfig.istLanguage,
+            'language_type': langConfig.languageType,
+            'domain': langConfig.domain,
+            'accent': langConfig.accent,
           },
-          'streamtrans': {'from': 'cn', 'to': 'en'},
+          'streamtrans': {
+            'from': langConfig.streamtransFrom,
+            'to': langConfig.streamtransTo,
+          },
           'tts': {
-            'vcn': 'x2_catherine',
+            'vcn': langConfig.ttsVcn,
             'tts_results': {
               'encoding': 'raw',
               'sample_rate': 16000,
@@ -277,6 +327,9 @@ class XfyunRealtimeAsrService {
           },
         },
       };
+
+      _log('🌐 使用语言配置 [type=$type]: $langConfig');
+
       if (type == 1) {
         _hasSentFirstMessageType1 = true;
       } else {

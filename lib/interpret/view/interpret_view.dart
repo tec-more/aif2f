@@ -16,16 +16,10 @@ import 'package:aif2f/interpret/widgets/auto_scroll_translation_view.dart';
 class InterpretView extends ConsumerWidget {
   const InterpretView({super.key});
 
-  // 语言列表
+  // 语言列表（根据讯飞API限制，目前只支持中英文互译）
   static const List<String> _languages = [
-    '英语',
     '中文',
-    '日语',
-    '韩语',
-    '法语',
-    '德语',
-    '西班牙语',
-    '俄语',
+    '英语',
   ];
 
   // 语言简称映射
@@ -871,13 +865,17 @@ class InterpretView extends ConsumerWidget {
     );
   }
 
-  /// 构建S2S文本框/输入卡片
+  /// 构建S2S文本框/输入卡片（只显示目标语言）
   Widget _buildS2STextField(
     BuildContext context,
     WidgetRef ref, [
     int type = 1,
   ]) {
     final state = ref.watch(interpretViewModelProvider);
+    final translatedText = type == 1
+        ? state.translatedOneText
+        : state.translatedTwoText;
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -885,68 +883,43 @@ class InterpretView extends ConsumerWidget {
         height:
             MediaQuery.of(context).size.height *
             (MediaQuery.of(context).size.width < 600 ? 0.6 : 0.6),
-        child: Column(
-          children: [
-            // 源语言输入区
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(
-                  MediaQuery.of(context).size.width < 600 ? 12 : 24,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller:
-                            TextEditingController(
-                                text: type == 1
-                                    ? state.inputOneText
-                                    : state.inputTwoText,
-                              )
-                              ..selection = TextSelection.fromPosition(
-                                TextPosition(
-                                  offset: type == 1
-                                      ? state.inputOneText.length
-                                      : state.inputTwoText.length,
-                                ),
-                              ),
-                        onChanged: (text) {
-                          ref
-                              .read(interpretViewModelProvider.notifier)
-                              .setInputText(text, type);
-                        },
-                        onSubmitted: (text) {
-                          ref
-                              .read(interpretViewModelProvider.notifier)
-                              .translateText(text, type);
-                        },
-                        maxLines: null,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: InputDecoration(
-                          hintText: '目标语言',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          hintStyle: TextStyle(
-                            fontSize: type == 1
-                                ? state.onefontSize
-                                : state.twofontSize,
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontSize: type == 1
-                              ? state.onefontSize
-                              : state.twofontSize,
-                          color: Colors.black87,
-                          height: 1.5,
-                        ),
-                      ),
+        child: Padding(
+          padding: EdgeInsets.all(
+            MediaQuery.of(context).size.width < 600 ? 12 : 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: translatedText)
+                    ..selection = TextSelection.fromPosition(
+                      TextPosition(offset: translatedText.length),
                     ),
-                  ],
+                  maxLines: null,
+                  textAlignVertical: TextAlignVertical.top,
+                  readOnly: true, // 翻译结果只读
+                  decoration: InputDecoration(
+                    hintText: '目标语言',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    hintStyle: TextStyle(
+                      fontSize: type == 1
+                          ? state.onefontSize
+                          : state.twofontSize,
+                    ),
+                  ),
+                  style: TextStyle(
+                    fontSize: type == 1
+                        ? state.onefontSize
+                        : state.twofontSize,
+                    color: Colors.black87,
+                    height: 1.5,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
