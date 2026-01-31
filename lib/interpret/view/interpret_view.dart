@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/components/icon/icon_text.dart';
 import 'package:country_icons/country_icons.dart';
-import 'package:aif2f/scene/view/scene_menu.dart';
-import 'package:aif2f/user/view/user_menu.dart';
-import 'package:aif2f/scene/model/scene_model.dart';
+// // 🔒 已临时注释未使用的导入
+// import 'package:aif2f/scene/view/scene_menu.dart';
+// import 'package:aif2f/user/view/user_menu.dart';
+// import 'package:aif2f/scene/model/scene_model.dart';
 import 'package:aif2f/interpret/viewmodel/interpret_view_model.dart';
 import 'package:aif2f/core/config/app_config.dart';
 import 'package:aif2f/interpret/widgets/auto_scroll_translation_view.dart';
+import 'package:aif2f/interpret/widgets/member_drawer.dart';
 
 /// 传译场景页面
 @RoutePage(name: 'InterpretRoute')
@@ -61,6 +63,15 @@ class InterpretView extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.primary,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+            tooltip: '菜单',
+          ),
+        ),
         title: Text(
           'AI传译',
           style: TextStyle(
@@ -70,10 +81,12 @@ class InterpretView extends ConsumerWidget {
           ),
         ),
         actions: [
-          SceneMenu(selectedScene: SceneType.interpretation),
-          const UserMenu(),
+          // // 🔒 已临时注释场景菜单和用户菜单
+          // SceneMenu(selectedScene: SceneType.interpretation),
+          // const UserMenu(),
         ],
       ),
+      drawer: const MemberDrawer(),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),

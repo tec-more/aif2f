@@ -68,16 +68,19 @@ class AppRoutes {
 
   /// 所有路由的集合
   /// 在 AppRouter 中直接使用此集合来简化配置
+  /// 🔒 已注释除传译功能以外的所有路由，仅保留传译功能
   static final List<AutoRoute> all = [
     interpret,
-    activityScene,
-    educationScene,
-    interviewScene,
-    meetingScene,
-    presentationScene,
-    about,
-    profile,
-    settings,
+    // // ========== 场景页面路由（已临时注释）==========
+    // activityScene,
+    // educationScene,
+    // interviewScene,
+    // meetingScene,
+    // presentationScene,
+    // // ========== 用户页面路由（已临时注释）==========
+    // about,
+    // profile,
+    // settings,
   ];
 }
 
