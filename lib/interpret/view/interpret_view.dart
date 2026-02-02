@@ -12,6 +12,8 @@ import 'package:aif2f/interpret/viewmodel/interpret_view_model.dart';
 import 'package:aif2f/core/config/app_config.dart';
 import 'package:aif2f/interpret/widgets/auto_scroll_translation_view.dart';
 import 'package:aif2f/interpret/widgets/member_drawer.dart';
+import 'package:aif2f/data/utils/auth_helper.dart';
+import 'package:aif2f/user/widgets/recharge_dialog.dart';
 
 /// 传译场景页面
 @RoutePage(name: 'InterpretRoute')
@@ -86,7 +88,35 @@ class InterpretView extends ConsumerWidget {
           // const UserMenu(),
         ],
       ),
-      drawer: const MemberDrawer(),
+      drawer: MemberDrawer(
+        onRecharge: () async {
+          final isLoggedIn = await checkLogin(context, ref);
+          if (isLoggedIn && context.mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => const RechargeDialog(),
+            );
+          }
+        },
+        onProfile: () async {
+          final isLoggedIn = await checkLogin(context, ref);
+          if (isLoggedIn && context.mounted) {
+            // TODO: Navigate to profile page when route is available
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('个人资料页面功能开发中')),
+            );
+          }
+        },
+        onSettings: () async {
+          final isLoggedIn = await checkLogin(context, ref);
+          if (isLoggedIn && context.mounted) {
+            // TODO: Navigate to settings page when route is available
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('设置页面功能开发中')),
+            );
+          }
+        },
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -730,8 +760,12 @@ class InterpretView extends ConsumerWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {
-          ref.read(interpretViewModelProvider.notifier).toggleRecording();
+        onTap: () async {
+          // 检查登录状态
+          final isLoggedIn = await checkLogin(context, ref);
+          if (isLoggedIn) {
+            ref.read(interpretViewModelProvider.notifier).toggleRecording();
+          }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),

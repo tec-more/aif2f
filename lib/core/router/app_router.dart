@@ -8,6 +8,8 @@ import 'package:aif2f/scene/view/presentation_scene_page.dart';
 import 'package:aif2f/user/view/about_page.dart';
 import 'package:aif2f/user/view/profile_page.dart';
 import 'package:aif2f/user/view/settings_page.dart';
+import 'package:aif2f/user/view/login_page.dart';
+import 'package:aif2f/user/view/recharge_page.dart';
 part 'app_router.gr.dart';
 
 /// 应用路由常量类
@@ -66,11 +68,19 @@ class AppRoutes {
     path: '/user/settings',
   );
 
+  /// Login页面 (user 模块)
+  static final login = AutoRoute(page: LoginRoute.page, path: '/user/login');
+
+  /// Recharge页面 (user 模块)
+  static final recharge =
+      AutoRoute(page: RechargeRoute.page, path: '/user/recharge');
+
   /// 所有路由的集合
   /// 在 AppRouter 中直接使用此集合来简化配置
-  /// 🔒 已注释除传译功能以外的所有路由，仅保留传译功能
   static final List<AutoRoute> all = [
     interpret,
+    login,
+    recharge,
     // // ========== 场景页面路由（已临时注释）==========
     // activityScene,
     // educationScene,

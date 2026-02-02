@@ -1,0 +1,167 @@
+/// 用户模型
+class UserModel {
+  final int id;
+  final String username;
+  final String? email;
+  final String? nickname;
+  final String? avatar;
+  final String? phone;
+  final bool isActive;
+  final bool isSuperuser;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  UserModel({
+    required this.id,
+    required this.username,
+    this.email,
+    this.nickname,
+    this.avatar,
+    this.phone,
+    required this.isActive,
+    required this.isSuperuser,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: json['id'] as int,
+      username: json['username'] as String,
+      email: json['email'] as String?,
+      nickname: json['nickname'] as String?,
+      avatar: json['avatar'] as String?,
+      phone: json['phone'] as String?,
+      isActive: json['is_active'] as bool? ?? json['isActive'] as bool? ?? true,
+      isSuperuser: json['is_superuser'] as bool? ?? json['isSuperuser'] as bool? ?? false,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'email': email,
+      'nickname': nickname,
+      'avatar': avatar,
+      'phone': phone,
+      'is_active': isActive,
+      'is_superuser': isSuperuser,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
+
+  UserModel copyWith({
+    int? id,
+    String? username,
+    String? email,
+    String? nickname,
+    String? avatar,
+    String? phone,
+    bool? isActive,
+    bool? isSuperuser,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      nickname: nickname ?? this.nickname,
+      avatar: avatar ?? this.avatar,
+      phone: phone ?? this.phone,
+      isActive: isActive ?? this.isActive,
+      isSuperuser: isSuperuser ?? this.isSuperuser,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
+/// 登录请求模型
+class LoginRequest {
+  final String username;
+  final String password;
+
+  LoginRequest({required this.username, required this.password});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'username': username,
+      'password': password,
+    };
+  }
+}
+
+/// 注册请求模型
+class RegisterRequest {
+  final String username;
+  final String email;
+  final String password;
+  final String? nickname;
+  final String? phone;
+
+  RegisterRequest({
+    required this.username,
+    required this.email,
+    required this.password,
+    this.nickname,
+    this.phone,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'username': username,
+      'email': email,
+      'password': password,
+      if (nickname != null) 'nickname': nickname,
+      if (phone != null) 'phone': phone,
+    };
+  }
+}
+
+/// 修改密码请求模型
+class ChangePasswordRequest {
+  final String oldPassword;
+  final String newPassword;
+
+  ChangePasswordRequest({required this.oldPassword, required this.newPassword});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'old_password': oldPassword,
+      'new_password': newPassword,
+    };
+  }
+}
+
+/// Token 响应模型
+class TokenResponse {
+  final String accessToken;
+  final String tokenType;
+  final int expiresIn;
+  final UserModel user;
+
+  TokenResponse({
+    required this.accessToken,
+    required this.tokenType,
+    required this.expiresIn,
+    required this.user,
+  });
+
+  factory TokenResponse.fromJson(Map<String, dynamic> json) {
+    return TokenResponse(
+      accessToken: json['access_token'] as String,
+      tokenType: json['token_type'] as String? ?? 'bearer',
+      expiresIn: json['expires_in'] as int? ?? 3600,
+      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
+    );
+  }
+}

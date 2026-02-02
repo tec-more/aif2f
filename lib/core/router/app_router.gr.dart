@@ -91,6 +91,22 @@ class InterviewSceneRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [LoginPage]
+class LoginRoute extends PageRouteInfo<void> {
+  const LoginRoute({List<PageRouteInfo>? children})
+    : super(LoginRoute.name, initialChildren: children);
+
+  static const String name = 'LoginRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const LoginPage();
+    },
+  );
+}
+
+/// generated route for
 /// [MeetingScenePage]
 class MeetingSceneRoute extends PageRouteInfo<void> {
   const MeetingSceneRoute({List<PageRouteInfo>? children})
@@ -134,6 +150,38 @@ class ProfileRoute extends PageRouteInfo<void> {
     name,
     builder: (data) {
       return const ProfilePage();
+    },
+  );
+}
+
+/// generated route for
+/// [RechargePage]
+class RechargeRoute extends PageRouteInfo<void> {
+  const RechargeRoute({List<PageRouteInfo>? children})
+    : super(RechargeRoute.name, initialChildren: children);
+
+  static const String name = 'RechargeRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const RechargePage();
+    },
+  );
+}
+
+/// generated route for
+/// [RegisterPage]
+class RegisterRoute extends PageRouteInfo<void> {
+  const RegisterRoute({List<PageRouteInfo>? children})
+    : super(RegisterRoute.name, initialChildren: children);
+
+  static const String name = 'RegisterRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const RegisterPage();
     },
   );
 }

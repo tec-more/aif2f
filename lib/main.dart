@@ -1,13 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/core/router/app_router.dart';
+import 'package:aif2f/data/providers/auth_provider.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
+
+  @override
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // 初始化认证状态（自动登录）
+    _initializeAuth();
+  }
+
+  Future<void> _initializeAuth() async {
+    await ref.read(authProvider.notifier).initializeAuth();
+  }
 
   @override
   Widget build(BuildContext context) {
