@@ -85,7 +85,37 @@ class UserModel {
   }
 }
 
-/// 登录请求模型
+/// 客户登录请求模型
+class CustomerLogin {
+  final String email;
+  final String password;
+
+  CustomerLogin({required this.email, required this.password});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'email': email,
+      'password': password,
+    };
+  }
+}
+
+/// 客户验证码登录请求模型
+class CustomerLoginCode {
+  final String email;
+  final String code;
+
+  CustomerLoginCode({required this.email, required this.code});
+
+  Map<String, dynamic> toJson() {
+    return {
+      'email': email,
+      'code': code,
+    };
+  }
+}
+
+/// 登录请求模型（兼容旧接口）
 class LoginRequest {
   final String username;
   final String password;

@@ -11,7 +11,7 @@ class AuthService {
   Future<TokenResponse> register(RegisterRequest request) async {
     try {
       final response = await _apiClient.post(
-        '/auth/register',
+        '/customer/register',
         data: request.toJson(),
       );
 
@@ -36,7 +36,61 @@ class AuthService {
     }
   }
 
-  /// 用户登录
+  /// 客户登录（使用邮箱）
+  Future<TokenResponse> customerLogin(CustomerLogin request) async {
+    try {
+      final response = await _apiClient.post(
+        '/customer/login',
+        data: request.toJson(),
+      );
+
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+
+      if (!apiResponse.success && apiResponse.code != 0) {
+        throw Exception(apiResponse.msg ?? '登录失败');
+      }
+
+      if (apiResponse.data != null) {
+        return TokenResponse.fromJson(apiResponse.data!);
+      }
+
+      throw Exception('登录响应格式错误');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// 客户验证码登录
+  Future<TokenResponse> customerLoginCode(CustomerLoginCode request) async {
+    try {
+      final response = await _apiClient.post(
+        '/customer/auth/login-code',
+        data: request.toJson(),
+      );
+
+      final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
+        response.data,
+        (json) => json as Map<String, dynamic>,
+      );
+
+      if (!apiResponse.success && apiResponse.code != 0) {
+        throw Exception(apiResponse.msg ?? '登录失败');
+      }
+
+      if (apiResponse.data != null) {
+        return TokenResponse.fromJson(apiResponse.data!);
+      }
+
+      throw Exception('登录响应格式错误');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// 用户登录（旧接口，保留兼容）
   Future<TokenResponse> login(LoginRequest request) async {
     try {
       final response = await _apiClient.post(
@@ -66,7 +120,7 @@ class AuthService {
   /// 获取当前用户信息
   Future<UserModel> getCurrentUser() async {
     try {
-      final response = await _apiClient.get('/auth/me');
+      final response = await _apiClient.get('/customer/me');
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,

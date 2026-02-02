@@ -702,7 +702,13 @@ class InterpretView extends ConsumerWidget {
           icon: ref.watch(interpretViewModelProvider).isSystemSoundEnabled
               ? const Icon(Icons.volume_up_outlined, size: 24)
               : const Icon(Icons.volume_off_outlined, size: 24),
-          onPressed: () {
+          onPressed: () async {
+            // 检查用户登录状态
+            final isLoggedIn = await checkLogin(context, ref);
+            if (!isLoggedIn) {
+              return; // 未登录或取消登录，不执行后续操作
+            }
+
             ref.read(interpretViewModelProvider.notifier).toggleSystemSound();
             // 开启系统声音时候，默认使用2栏
             if (ref.watch(interpretViewModelProvider).isSystemSoundEnabled) {
@@ -738,7 +744,13 @@ class InterpretView extends ConsumerWidget {
               ? const Icon(Icons.record_voice_over, size: 22)
               : const Icon(Icons.voice_over_off, size: 22),
           color: isEnabled ? Theme.of(context).colorScheme.primary : null,
-          onPressed: () {
+          onPressed: () async {
+            // 检查用户登录状态
+            final isLoggedIn = await checkLogin(context, ref);
+            if (!isLoggedIn) {
+              return; // 未登录或取消登录，不执行后续操作
+            }
+
             if (panel == 1) {
               ref.read(interpretViewModelProvider.notifier).toggleOneTts();
             } else {

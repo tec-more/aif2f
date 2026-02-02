@@ -110,13 +110,69 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// 用户登录
-  Future<bool> login(String username, String password) async {
+  /// 用户登录（使用邮箱）
+  Future<bool> login(String emailOrUsername, String password) async {
     state = state.copyWith(status: AuthStatus.loading);
 
     try {
-      final request = LoginRequest(username: username, password: password);
-      final response = await _authService.login(request);
+      // 判断输入的是邮箱还是用户名
+      final isEmail = emailOrUsername.contains('@');
+
+      if (isEmail) {
+        // 使用 customer 登录（邮箱）
+        final request = CustomerLogin(email: emailOrUsername, password: password);
+        final response = await _authService.customerLogin(request);
+
+        // 保存 Token 到本地
+        await _tokenStorage.saveToken(response.accessToken);
+        await _tokenStorage.saveUserInfo(response.user.id, response.user.username);
+
+        // 设置到 API Client
+        _apiClient.setToken(response.accessToken);
+
+        // 更新状态
+        state = AuthState(
+          status: AuthStatus.authenticated,
+          user: response.user,
+        );
+
+        return true;
+      } else {
+        // 使用旧接口登录（用户名）
+        final request = LoginRequest(username: emailOrUsername, password: password);
+        final response = await _authService.login(request);
+
+        // 保存 Token 到本地
+        await _tokenStorage.saveToken(response.accessToken);
+        await _tokenStorage.saveUserInfo(response.user.id, response.user.username);
+
+        // 设置到 API Client
+        _apiClient.setToken(response.accessToken);
+
+        // 更新状态
+        state = AuthState(
+          status: AuthStatus.authenticated,
+          user: response.user,
+        );
+
+        return true;
+      }
+    } catch (e) {
+      state = AuthState(
+        status: AuthStatus.error,
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+      );
+      return false;
+    }
+  }
+
+  /// 用户验证码登录
+  Future<bool> loginWithCode(String email, String code) async {
+    state = state.copyWith(status: AuthStatus.loading);
+
+    try {
+      final request = CustomerLoginCode(email: email, code: code);
+      final response = await _authService.customerLoginCode(request);
 
       // 保存 Token 到本地
       await _tokenStorage.saveToken(response.accessToken);
@@ -236,6 +292,11 @@ class AuthNotifier extends Notifier<AuthState> {
   /// 清除错误信息
   void clearError() {
     state = state.copyWith(errorMessage: null);
+  }
+
+  /// 重置为未认证状态（用于解决卡在 loading 状态的问题）
+  void resetToUnauthenticated() {
+    state = AuthState(status: AuthStatus.unauthenticated);
   }
 }
 

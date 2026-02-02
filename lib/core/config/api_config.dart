@@ -13,14 +13,15 @@ class ApiConfig {
   static String get apiBaseUrl => '$baseUrl$apiVersion';
 
   /// 连接超时时间（毫秒）
-  static const int connectTimeout = 15000;
+  static const int connectTimeout = 5000;
 
   /// 接收超时时间（毫秒）
-  static const int receiveTimeout = 15000;
+  static const int receiveTimeout = 10000;
 
   /// API 端点路径
   static const String authPath = '/auth';
   static const String usersPath = '/users';
+  static const String customerPath = '/customer';
   static const String alipayPath = '/pay/alipay';
   static const String wechatPayPath = '/pay/wechat';
 
@@ -30,6 +31,11 @@ class ApiConfig {
   static String get logoutEndpoint => '$apiBaseUrl$authPath/logout';
   static String get currentUserEndpoint => '$apiBaseUrl$authPath/me';
   static String get changePasswordEndpoint => '$apiBaseUrl$authPath/change-password';
+
+  /// 客户相关端点
+  static String get customerLoginEndpoint => '$apiBaseUrl$customerPath/login';
+  static String get customerRegisterEndpoint => '$apiBaseUrl$customerPath/register';
+  static String get customerMeEndpoint => '$apiBaseUrl$customerPath/me';
 
   /// 用户相关端点
   static String userListEndpoint(int page, int pageSize) =>
