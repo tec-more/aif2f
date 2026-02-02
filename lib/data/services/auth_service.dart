@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import '../models/user_model.dart';
-import '../models/payment_model.dart';
-import 'api_client.dart';
+import 'package:aif2f/data/models/user_model.dart';
+import 'package:aif2f/data/models/payment_model.dart';
+import 'package:aif2f/data/services/api_client.dart';
 
 /// 认证服务
 class AuthService {

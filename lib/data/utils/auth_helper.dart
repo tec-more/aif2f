@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../user/widgets/login_dialog.dart';
-import '../providers/auth_provider.dart';
+import 'package:aif2f/user/widgets/login_dialog.dart';
+import 'package:aif2f/data/providers/auth_provider.dart';
 
 /// 登录检查辅助函数
 ///

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../../core/config/api_config.dart';
+import 'package:aif2f/core/config/api_config.dart';
 
 /// API 客户端
 class ApiClient {

@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/user_model.dart';
-import '../services/auth_service.dart';
-import '../services/api_client.dart';
-import '../services/token_storage_service.dart';
+import 'package:aif2f/data/models/user_model.dart';
+import 'package:aif2f/data/services/auth_service.dart';
+import 'package:aif2f/data/services/api_client.dart';
+import 'package:aif2f/data/services/token_storage_service.dart';
 
 /// API Client Provider
 final apiClientProvider = Provider<ApiClient>((ref) {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/providers/auth_provider.dart';
-import '../../components/button/primary_button.dart';
+import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/components/button/primary_button.dart';
 
 /// 登录对话框
 class LoginDialog extends ConsumerStatefulWidget {

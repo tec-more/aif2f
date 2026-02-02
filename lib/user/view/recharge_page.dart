@@ -2,8 +2,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../data/models/payment_model.dart';
-import '../../data/providers/payment_provider.dart';
+import 'package:aif2f/data/models/payment_model.dart';
+import 'package:aif2f/data/providers/payment_provider.dart';
 
 /// 充值页面
 @RoutePage()

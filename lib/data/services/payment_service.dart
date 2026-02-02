@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import '../models/payment_model.dart';
-import 'api_client.dart';
+import 'package:aif2f/data/models/payment_model.dart';
+import 'package:aif2f/data/services/api_client.dart';
 
 /// 支付服务
 class PaymentService {

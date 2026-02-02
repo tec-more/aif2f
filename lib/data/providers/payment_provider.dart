@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/payment_model.dart';
-import '../services/payment_service.dart';
+import 'package:aif2f/data/models/payment_model.dart';
+import 'package:aif2f/data/services/payment_service.dart';
 
 /// Payment Service Provider
 final paymentServiceProvider = Provider<PaymentService>((ref) {
