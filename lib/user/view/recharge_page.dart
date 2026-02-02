@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/providers/payment_provider.dart';
+import 'package:aif2f/data/providers/qixiang_pay_provider.dart';
 
 /// 充值页面
 @RoutePage()
@@ -45,16 +46,30 @@ class _RechargePageState extends ConsumerState<RechargePage> {
     }
 
     _selectedPaymentType = type;
-    final paymentNotifier = ref.read(paymentProvider.notifier);
+    final orderNo = _generateOrderNo();
 
-    // 创建订单
-    final order = await paymentNotifier.createPaymentOrder(
-      outTradeNo: _generateOrderNo(),
-      amount: _selectedAmount!,
-      subject: '账户充值',
-      body: '充值金额: ¥${_selectedAmount!.toStringAsFixed(2)}',
-      type: type,
-    );
+    PaymentOrder? order;
+
+    // 微信支付使用七相支付，支付宝使用原有支付服务
+    if (type == PaymentType.wechat) {
+      final qixiangNotifier = ref.read(qixiangPayProvider.notifier);
+      order = await qixiangNotifier.createPaymentOrder(
+        type: type,
+        outTradeNo: orderNo,
+        money: _selectedAmount!,
+        name: '账户充值',
+        param: '充值金额: ¥${_selectedAmount!.toStringAsFixed(2)}',
+      );
+    } else {
+      final paymentNotifier = ref.read(paymentProvider.notifier);
+      order = await paymentNotifier.createPaymentOrder(
+        outTradeNo: orderNo,
+        amount: _selectedAmount!,
+        subject: '账户充值',
+        body: '充值金额: ¥${_selectedAmount!.toStringAsFixed(2)}',
+        type: type,
+      );
+    }
 
     if (!mounted) return;
 
@@ -64,7 +79,9 @@ class _RechargePageState extends ConsumerState<RechargePage> {
       await _openPaymentUrl(order, type);
     } else {
       // 显示错误信息
-      final errorMsg = ref.read(paymentProvider).errorMessage ?? '创建订单失败';
+      final errorMsg = type == PaymentType.wechat
+          ? ref.read(qixiangPayProvider).errorMessage ?? '创建订单失败'
+          : ref.read(paymentProvider).errorMessage ?? '创建订单失败';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );
@@ -80,17 +97,10 @@ class _RechargePageState extends ConsumerState<RechargePage> {
         uri = Uri.parse(order.qrCode!);
       }
     } else if (type == PaymentType.wechat) {
-      // 微信支付：需要特殊处理
-      // 对于H5支付，可能需要返回一个支付URL
-      // 这里暂时显示提示，实际微信支付需要使用微信SDK
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('微信支付需要在对话框中查看支付信息'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
+      // 微信支付：七相支付返回的 payUrl（七相支付）
+      if (order.qrCode != null) {
+        uri = Uri.parse(order.qrCode!);
+      }
     }
 
     if (uri != null && await canLaunchUrl(uri)) {
@@ -124,7 +134,12 @@ class _RechargePageState extends ConsumerState<RechargePage> {
         },
         onCancel: () {
           Navigator.of(context).pop();
-          ref.read(paymentProvider.notifier).reset();
+          // 根据支付类型重置相应的provider
+          if (type == PaymentType.wechat) {
+            ref.read(qixiangPayProvider.notifier).reset();
+          } else {
+            ref.read(paymentProvider.notifier).reset();
+          }
         },
       ),
     );
@@ -138,13 +153,26 @@ class _RechargePageState extends ConsumerState<RechargePage> {
       builder: (context) => const _PollingDialog(),
     );
 
-    final paymentNotifier = ref.read(paymentProvider.notifier);
-    final success = await paymentNotifier.pollOrderStatus(
-      orderId,
-      type,
-      maxAttempts: 30,
-      intervalSeconds: 2,
-    );
+    bool success;
+
+    // 根据支付类型调用不同的服务
+    if (type == PaymentType.wechat) {
+      final qixiangNotifier = ref.read(qixiangPayProvider.notifier);
+      success = await qixiangNotifier.pollOrderStatus(
+        orderId,
+        type,
+        maxAttempts: 30,
+        intervalSeconds: 2,
+      );
+    } else {
+      final paymentNotifier = ref.read(paymentProvider.notifier);
+      success = await paymentNotifier.pollOrderStatus(
+        orderId,
+        type,
+        maxAttempts: 30,
+        intervalSeconds: 2,
+      );
+    }
 
     if (!mounted) return;
 
@@ -166,7 +194,9 @@ class _RechargePageState extends ConsumerState<RechargePage> {
       );
     } else {
       // 显示失败信息
-      final errorMsg = ref.read(paymentProvider).errorMessage ?? '支付失败';
+      final errorMsg = type == PaymentType.wechat
+          ? ref.read(qixiangPayProvider).errorMessage ?? '支付失败'
+          : ref.read(paymentProvider).errorMessage ?? '支付失败';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );
@@ -403,6 +433,7 @@ class _PaymentDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAlipay = type == PaymentType.alipay;
+    final isWechat = type == PaymentType.wechat;
 
     return AlertDialog(
       title: Text(isAlipay ? '支付宝支付' : '微信支付'),
@@ -420,18 +451,19 @@ class _PaymentDialog extends StatelessWidget {
           const SizedBox(height: 16),
           Text('订单号: ${order.orderId}'),
           const SizedBox(height: 8),
-          const Text('请在支付应用中完成支付'),
-          if (isAlipay && order.qrCode != null) ...[
-            const SizedBox(height: 16),
-            const Text('点击下方按钮打开支付页面'),
+          if (isAlipay) ...[
+            const Text('请在支付宝中完成支付'),
+            if (order.qrCode != null) ...[
+              const SizedBox(height: 16),
+              const Text('点击下方按钮打开支付页面'),
+            ],
           ],
-          if (!isAlipay && order.wechatParams != null) ...[
-            const SizedBox(height: 16),
-            const Text('微信支付参数:'),
-            const SizedBox(height: 8),
-            Text('prepayId: ${order.wechatParams!.prepayId}'),
-            const SizedBox(height: 4),
-            Text('appId: ${order.wechatParams!.appId}'),
+          if (isWechat) ...[
+            const Text('请在微信中完成支付'),
+            if (order.qrCode != null) ...[
+              const SizedBox(height: 16),
+              const Text('点击下方按钮打开支付页面'),
+            ],
           ],
         ],
       ),
@@ -440,13 +472,13 @@ class _PaymentDialog extends StatelessWidget {
           onPressed: onCancel,
           child: const Text('取消'),
         ),
-        if (isAlipay && order.qrCode != null)
+        if (order.qrCode != null)
           ElevatedButton.icon(
             onPressed: onOpenPayment,
             icon: const Icon(Icons.payment, size: 18),
             label: const Text('打开支付'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1677FF),
+              backgroundColor: isAlipay ? const Color(0xFF1677FF) : const Color(0xFF07C160),
             ),
           ),
         ElevatedButton(

@@ -96,17 +96,16 @@ class _LoginDialogState extends ConsumerState<LoginDialog> {
     final authState = ref.watch(authProvider);
     final isLoading = authState.status == AuthStatus.loading;
 
-    return Dialog(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 400),
-        padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+    return AlertDialog(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      contentPadding: const EdgeInsets.all(24),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
                 // 标题
                 Icon(
                   _isLoginMode ? Icons.login : Icons.person_add,
@@ -153,6 +152,33 @@ class _LoginDialogState extends ConsumerState<LoginDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
+
+                // 邮箱输入框（仅注册模式）
+                if (!_isLoginMode)
+                  Column(
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        enabled: !isLoading,
+                        decoration: const InputDecoration(
+                          labelText: '邮箱',
+                          prefixIcon: Icon(Icons.email),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '请输入邮箱';
+                          }
+                          // 简单的邮箱格式验证
+                          if (!value.contains('@') || !value.contains('.')) {
+                            return '请输入有效的邮箱地址';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
 
                 // 密码输入框
                 TextFormField(
@@ -224,8 +250,7 @@ class _LoginDialogState extends ConsumerState<LoginDialog> {
                         },
                   child: const Text('取消'),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
