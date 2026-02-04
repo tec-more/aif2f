@@ -3,7 +3,7 @@ class ApiConfig {
   /// API 基础地址
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:9999',
+    defaultValue: 'http://127.0.0.1:9998',
   );
 
   /// API 版本
@@ -30,30 +30,38 @@ class ApiConfig {
   static String get registerEndpoint => '$apiBaseUrl$authPath/register';
   static String get logoutEndpoint => '$apiBaseUrl$authPath/logout';
   static String get currentUserEndpoint => '$apiBaseUrl$authPath/me';
-  static String get changePasswordEndpoint => '$apiBaseUrl$authPath/change-password';
+  static String get changePasswordEndpoint =>
+      '$apiBaseUrl$authPath/change-password';
 
   /// 客户相关端点
-  static String get customerLoginEndpoint => '$apiBaseUrl$customerPath/login';
-  static String get customerRegisterEndpoint => '$apiBaseUrl$customerPath/register';
-  static String get customerMeEndpoint => '$apiBaseUrl$customerPath/me';
+  static String get customerLoginEndpoint => '$apiBaseUrl$customerPath/auth/login';
+  static String get customerRegisterEndpoint =>
+      '$apiBaseUrl$customerPath/auth/register';
+  static String get customerMeEndpoint => '$apiBaseUrl$customerPath/auth/me';
 
   /// 用户相关端点
   static String userListEndpoint(int page, int pageSize) =>
       '$apiBaseUrl$usersPath/list?page=$page&page_size=$pageSize';
-  static String userDetailEndpoint(int userId) => '$apiBaseUrl$usersPath/$userId';
-  static String userUpdateEndpoint(int userId) => '$apiBaseUrl$usersPath/$userId';
+  static String userDetailEndpoint(int userId) =>
+      '$apiBaseUrl$usersPath/$userId';
+  static String userUpdateEndpoint(int userId) =>
+      '$apiBaseUrl$usersPath/$userId';
 
   /// 支付宝支付端点
-  static String get alipayCreateOrderEndpoint => '$apiBaseUrl$alipayPath/orders';
+  static String get alipayCreateOrderEndpoint =>
+      '$apiBaseUrl$alipayPath/orders';
   static String alipayQueryOrderEndpoint(String orderId) =>
       '$apiBaseUrl$alipayPath/orders/$orderId';
   static String get alipayRefundEndpoint => '$apiBaseUrl$alipayPath/refunds';
   static String get alipayNotifyEndpoint => '$apiBaseUrl$alipayPath/notify';
 
   /// 微信支付端点
-  static String get wechatPayCreateOrderEndpoint => '$apiBaseUrl$wechatPayPath/orders';
+  static String get wechatPayCreateOrderEndpoint =>
+      '$apiBaseUrl$wechatPayPath/orders';
   static String wechatPayQueryOrderEndpoint(String orderId) =>
       '$apiBaseUrl$wechatPayPath/orders/$orderId';
-  static String get wechatPayRefundEndpoint => '$apiBaseUrl$wechatPayPath/refunds';
-  static String get wechatPayNotifyEndpoint => '$apiBaseUrl$wechatPayPath/notify';
+  static String get wechatPayRefundEndpoint =>
+      '$apiBaseUrl$wechatPayPath/refunds';
+  static String get wechatPayNotifyEndpoint =>
+      '$apiBaseUrl$wechatPayPath/notify';
 }

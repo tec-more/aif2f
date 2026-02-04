@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/core/router/app_router.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/services/toast_service.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -18,8 +19,10 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   void initState() {
     super.initState();
-    // 初始化认证状态（自动登录）
-    _initializeAuth();
+    // 延迟执行，避免在 widget tree 构建时修改 provider
+    Future(() {
+      _initializeAuth();
+    });
   }
 
   Future<void> _initializeAuth() async {
@@ -45,6 +48,16 @@ class _MyAppState extends ConsumerState<MyApp> {
         ),
       ),
       routerConfig: AppRouter().config(),
+      builder: (context, child) {
+        return Navigator(
+          key: ToastService.navigatorKey,
+          onGenerateRoute: (settings) {
+            return MaterialPageRoute(
+              builder: (context) => child!,
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:aif2f/data/models/user_model.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/api_client.dart';
@@ -10,28 +11,60 @@ class AuthService {
   /// 用户注册
   Future<TokenResponse> register(RegisterRequest request) async {
     try {
+      if (kDebugMode) {
+        print('📝 开始注册请求');
+        print('请求数据: ${request.toJson()}');
+      }
+
       final response = await _apiClient.post(
-        '/customer/register',
+        '/customer/auth/register',
         data: request.toJson(),
       );
+
+      if (kDebugMode) {
+        print('✅ 注册响应状态码: ${response.statusCode}');
+        print('📦 响应数据: ${response.data}');
+      }
+
+      if (kDebugMode) {
+        print('📋 [AuthService] 原始响应数据类型: ${response.data.runtimeType}');
+        print('📋 [AuthService] 原始响应数据: ${response.data}');
+      }
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
         (json) => json as Map<String, dynamic>,
       );
 
+      if (kDebugMode) {
+        print('📊 API响应解析 - success: ${apiResponse.success}, code: ${apiResponse.code}, msg: ${apiResponse.msg}');
+        print('📦 API响应数据类型: ${apiResponse.data.runtimeType}');
+        print('📦 API响应数据内容: ${apiResponse.data}');
+      }
+
       if (!apiResponse.success && apiResponse.code != 0) {
+        if (kDebugMode) print('❌ 注册失败: ${apiResponse.msg}');
         throw Exception(apiResponse.msg ?? '注册失败');
       }
 
       // 从 data 中提取 token 和 user
       if (apiResponse.data != null) {
+        if (kDebugMode) {
+          print('✅ 注册成功，提取token和用户信息');
+          print('🔍 data 字段包含的键: ${(apiResponse.data! as Map<String, dynamic>).keys.toList()}');
+        }
         return TokenResponse.fromJson(apiResponse.data!);
       }
 
       // 如果 data 为 null，说明可能直接返回了 user
+      if (kDebugMode) print('❌ 注册响应格式错误: data为null');
       throw Exception('注册响应格式错误');
     } on DioException catch (e) {
+      if (kDebugMode) {
+        print('❌ DioException异常: ${e.message}');
+        print('❌ 错误类型: ${e.type}');
+        print('❌ 错误响应: ${e.response?.data}');
+      }
       throw _handleDioError(e);
     }
   }
@@ -40,7 +73,7 @@ class AuthService {
   Future<TokenResponse> customerLogin(CustomerLogin request) async {
     try {
       final response = await _apiClient.post(
-        '/customer/login',
+        '/customer/auth/login',
         data: request.toJson(),
       );
 
@@ -120,7 +153,7 @@ class AuthService {
   /// 获取当前用户信息
   Future<UserModel> getCurrentUser() async {
     try {
-      final response = await _apiClient.get('/customer/me');
+      final response = await _apiClient.get('/customer/auth/me');
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
@@ -145,7 +178,7 @@ class AuthService {
   Future<String> changePassword(ChangePasswordRequest request) async {
     try {
       final response = await _apiClient.post(
-        '/auth/change-password',
+        '/customer/auth/change-password',
         data: request.toJson(),
       );
 
@@ -167,7 +200,7 @@ class AuthService {
   /// 用户登出
   Future<String> logout() async {
     try {
-      final response = await _apiClient.post('/auth/logout');
+      final response = await _apiClient.post('/customer/auth/logout');
 
       final apiResponse = ApiResponse<dynamic>.fromJson(
         response.data,
@@ -190,6 +223,20 @@ class AuthService {
         message = '网络连接超时，请检查网络设置';
         break;
       case DioExceptionType.badResponse:
+        // 尝试从响应体中提取 API 返回的错误消息
+        final responseData = error.response?.data;
+        if (responseData is Map<String, dynamic>) {
+          // 优先使用 API 返回的 msg 字段
+          if (responseData['msg'] is String && (responseData['msg'] as String).isNotEmpty) {
+            message = responseData['msg'] as String;
+            if (kDebugMode) {
+              print('📋 使用API返回的msg: $message');
+            }
+            return Exception(message);
+          }
+        }
+
+        // 如果没有找到 msg 字段，使用状态码默认消息
         final statusCode = error.response?.statusCode;
         if (statusCode == 401) {
           message = '未授权，请重新登录';

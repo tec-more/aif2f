@@ -158,9 +158,23 @@ class AuthNotifier extends Notifier<AuthState> {
         return true;
       }
     } catch (e) {
+      // 清理错误信息，移除技术性前缀和符号
+      String errorMsg = e.toString();
+      errorMsg = errorMsg.replaceAll('Exception: ', '');
+      errorMsg = errorMsg.replaceAll('Error: ', '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'_dio@\w+:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'DioException:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'dio:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^Instance of\s+'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^\s*>\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^>\s*'), '');
+      errorMsg = errorMsg.replaceAll('\n', ' ');
+      errorMsg = errorMsg.replaceAll(RegExp(r'\s+'), ' ');
+      errorMsg = errorMsg.trim();
+
       state = AuthState(
         status: AuthStatus.error,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: errorMsg.isNotEmpty ? errorMsg : '操作失败，请稍后重试',
       );
       return false;
     }
@@ -189,48 +203,135 @@ class AuthNotifier extends Notifier<AuthState> {
 
       return true;
     } catch (e) {
+      // 清理错误信息，移除技术性前缀和符号
+      String errorMsg = e.toString();
+      errorMsg = errorMsg.replaceAll('Exception: ', '');
+      errorMsg = errorMsg.replaceAll('Error: ', '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'_dio@\w+:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'DioException:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'dio:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^Instance of\s+'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^\s*>\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^>\s*'), '');
+      errorMsg = errorMsg.replaceAll('\n', ' ');
+      errorMsg = errorMsg.replaceAll(RegExp(r'\s+'), ' ');
+      errorMsg = errorMsg.trim();
+
       state = AuthState(
         status: AuthStatus.error,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: errorMsg.isNotEmpty ? errorMsg : '操作失败，请稍后重试',
       );
       return false;
     }
   }
 
   /// 用户注册
-  Future<bool> register(String username, String email, String password,
+  Future<bool> register(String username, String email, String password, String code,
       {String? nickname, String? phone}) async {
     state = state.copyWith(status: AuthStatus.loading);
 
     try {
+      if (kDebugMode) {
+        print('🔄 [AuthProvider] 开始注册流程');
+        print('📧 [AuthProvider] 邮箱: $email');
+        print('👤 [AuthProvider] 用户名: $username');
+      }
+
       final request = RegisterRequest(
         username: username,
         email: email,
         password: password,
+        code: code,
         nickname: nickname,
         phone: phone,
       );
+
+      if (kDebugMode) {
+        print('📦 [AuthProvider] 创建注册请求完成');
+      }
+
       final response = await _authService.register(request);
 
+      if (kDebugMode) {
+        print('✅ [AuthProvider] AuthService.register() 成功返回');
+        print('🎫 [AuthProvider] Access Token: ${response.accessToken.substring(0, 20)}...');
+        print('👤 [AuthProvider] User ID: ${response.user.id}, Username: ${response.user.username}');
+      }
+
       // 保存 Token 到本地
+      if (kDebugMode) {
+        print('💾 [AuthProvider] 开始保存 Token...');
+      }
       await _tokenStorage.saveToken(response.accessToken);
+      if (kDebugMode) {
+        print('✅ [AuthProvider] Token 保存完成');
+      }
+
+      // 保存用户信息
+      if (kDebugMode) {
+        print('💾 [AuthProvider] 开始保存用户信息...');
+      }
       await _tokenStorage.saveUserInfo(response.user.id, response.user.username);
+      if (kDebugMode) {
+        print('✅ [AuthProvider] 用户信息保存完成');
+      }
 
       // 设置到 API Client
+      if (kDebugMode) {
+        print('🔧 [AuthProvider] 设置 Token 到 API Client...');
+      }
       _apiClient.setToken(response.accessToken);
+      if (kDebugMode) {
+        print('✅ [AuthProvider] API Client Token 设置完成');
+      }
 
       // 更新状态
+      if (kDebugMode) {
+        print('🔄 [AuthProvider] 更新认证状态为 authenticated...');
+      }
       state = AuthState(
         status: AuthStatus.authenticated,
         user: response.user,
       );
+      if (kDebugMode) {
+        print('✅ [AuthProvider] 状态更新完成');
+        print('🎉 [AuthProvider] 注册流程完全成功，准备返回 true');
+      }
 
       return true;
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ [AuthProvider] 注册流程失败');
+        print('❌ [AuthProvider] 错误类型: ${e.runtimeType}');
+        print('❌ [AuthProvider] 错误信息: ${e.toString()}');
+        print('❌ [AuthProvider] 错误堆栈: ${StackTrace.current}');
+      }
+
+      // 清理错误信息，移除技术性前缀和符号
+      String errorMsg = e.toString();
+      errorMsg = errorMsg.replaceAll('Exception: ', '');
+      errorMsg = errorMsg.replaceAll('Error: ', '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'_dio@\w+:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'DioException:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'dio:\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^Instance of\s+'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^\s*>\s*'), '');
+      errorMsg = errorMsg.replaceAll(RegExp(r'^>\s*'), '');
+      errorMsg = errorMsg.replaceAll('\n', ' ');
+      errorMsg = errorMsg.replaceAll(RegExp(r'\s+'), ' ');
+      errorMsg = errorMsg.trim();
+
+      if (kDebugMode) {
+        print('❌ [AuthProvider] 清理后的错误信息: $errorMsg');
+      }
+
       state = AuthState(
         status: AuthStatus.error,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: errorMsg.isNotEmpty ? errorMsg : '操作失败，请稍后重试',
       );
+      if (kDebugMode) {
+        print('❌ [AuthProvider] 已更新状态为 error，准备返回 false');
+      }
       return false;
     }
   }

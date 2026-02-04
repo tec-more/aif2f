@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/components/icon/icon_text.dart';
 import 'package:country_icons/country_icons.dart';
@@ -14,6 +15,7 @@ import 'package:aif2f/interpret/widgets/auto_scroll_translation_view.dart';
 import 'package:aif2f/interpret/widgets/member_drawer.dart';
 import 'package:aif2f/data/utils/auth_helper.dart';
 import 'package:aif2f/user/widgets/recharge_dialog.dart';
+import 'package:aif2f/data/services/toast_service.dart';
 
 /// 传译场景页面
 @RoutePage(name: 'InterpretRoute')
@@ -102,18 +104,14 @@ class InterpretView extends ConsumerWidget {
           final isLoggedIn = await checkLogin(context, ref);
           if (isLoggedIn && context.mounted) {
             // TODO: Navigate to profile page when route is available
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('个人资料页面功能开发中')),
-            );
+            toastService.showInfo('个人资料页面功能开发中');
           }
         },
         onSettings: () async {
           final isLoggedIn = await checkLogin(context, ref);
           if (isLoggedIn && context.mounted) {
             // TODO: Navigate to settings page when route is available
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('设置页面功能开发中')),
-            );
+            toastService.showInfo('设置页面功能开发中');
           }
         },
       ),
@@ -703,8 +701,13 @@ class InterpretView extends ConsumerWidget {
               ? const Icon(Icons.volume_up_outlined, size: 24)
               : const Icon(Icons.volume_off_outlined, size: 24),
           onPressed: () async {
+            if (kDebugMode) print('🔊 [系统声音按钮] 点击');
+
             // 检查用户登录状态
             final isLoggedIn = await checkLogin(context, ref);
+
+            if (kDebugMode) print('📊 [系统声音按钮] 登录检查结果: $isLoggedIn');
+
             if (!isLoggedIn) {
               return; // 未登录或取消登录，不执行后续操作
             }
@@ -745,8 +748,13 @@ class InterpretView extends ConsumerWidget {
               : const Icon(Icons.voice_over_off, size: 22),
           color: isEnabled ? Theme.of(context).colorScheme.primary : null,
           onPressed: () async {
+            if (kDebugMode) print('🔊 [播报按钮] 点击 - 栏目: $panel');
+
             // 检查用户登录状态
             final isLoggedIn = await checkLogin(context, ref);
+
+            if (kDebugMode) print('📊 [播报按钮] 登录检查结果: $isLoggedIn');
+
             if (!isLoggedIn) {
               return; // 未登录或取消登录，不执行后续操作
             }
@@ -773,8 +781,13 @@ class InterpretView extends ConsumerWidget {
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: () async {
+          if (kDebugMode) print('🎤 [录音按钮] 点击');
+
           // 检查登录状态
           final isLoggedIn = await checkLogin(context, ref);
+
+          if (kDebugMode) print('📊 [录音按钮] 登录检查结果: $isLoggedIn');
+
           if (isLoggedIn) {
             ref.read(interpretViewModelProvider.notifier).toggleRecording();
           }

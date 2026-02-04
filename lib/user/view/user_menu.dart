@@ -1,12 +1,15 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/core/router/app_router.dart';
+import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/services/toast_service.dart';
 
-class UserMenu extends StatelessWidget {
+class UserMenu extends ConsumerWidget {
   const UserMenu({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<String>(
       onSelected: (value) {
         switch (value) {
@@ -23,7 +26,7 @@ class UserMenu extends StatelessWidget {
             context.router.push(AboutRoute());
             break;
           case 'logout':
-            _showLogoutConfirmation(context);
+            _showLogoutConfirmation(context, ref);
             break;
         }
       },
@@ -84,7 +87,7 @@ class UserMenu extends StatelessWidget {
     );
   }
 
-  void _showLogoutConfirmation(BuildContext context) {
+  void _showLogoutConfirmation(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -96,9 +99,13 @@ class UserMenu extends StatelessWidget {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
               // 执行退出登录逻辑
+              await ref.read(authProvider.notifier).logout();
+              if (context.mounted) {
+                toastService.showSuccess('已退出登录');
+              }
             },
             child: const Text('确定'),
           ),

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/core/models/fibonacci_membership.dart';
+import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/services/toast_service.dart';
 
 /// 会员侧边抽屉菜单
 /// 显示会员等级、累计时长和充值入口（基于Fibonacci数列）
-class MemberDrawer extends StatelessWidget {
+class MemberDrawer extends ConsumerWidget {
   const MemberDrawer({
     super.key,
     this.membershipInfo,
@@ -33,7 +36,7 @@ class MemberDrawer extends StatelessWidget {
   final VoidCallback? onAbout;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // 使用提供的会员信息，或使用默认的免费用户
     final info = membershipInfo ?? FibonacciMembershipInfo.free();
     final level = info.level;
@@ -110,6 +113,14 @@ class MemberDrawer extends StatelessWidget {
                       onTap: () {
                         Navigator.pop(context);
                         onAbout?.call();
+                      },
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.logout,
+                      title: '退出登录',
+                      onTap: () async {
+                        await _handleLogout(context, ref);
                       },
                     ),
                   ],
@@ -473,9 +484,7 @@ class MemberDrawer extends StatelessWidget {
       onTap: () {
         final bonusText = bonusHours > 0 ? " + 赠送$bonusHours小时" : "";
         final levelUpText = newLevel > currentLevel ? " → LV.$newLevel" : "";
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已选择：$hours 小时$bonusText，合计$totalHours小时$levelUpText')),
-        );
+        toastService.showInfo('已选择：$hours 小时$bonusText，合计$totalHours小时$levelUpText');
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -633,5 +642,37 @@ class MemberDrawer extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 处理退出登录
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    // 显示确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认退出'),
+        content: const Text('确定要退出登录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // 执行退出登录
+      await ref.read(authProvider.notifier).logout();
+
+      if (context.mounted) {
+        Navigator.pop(context); // 关闭抽屉
+        toastService.showSuccess('已退出登录');
+      }
+    }
   }
 }

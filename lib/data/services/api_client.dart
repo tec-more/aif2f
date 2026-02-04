@@ -8,12 +8,22 @@ class ApiClient {
   factory ApiClient() => _instance;
   ApiClient._internal();
 
-  late final Dio _dio;
+  late Dio _dio;
+  bool _isInitialized = false;
 
   Dio get dio => _dio;
 
   /// 初始化
   void init({String? baseUrl, String? token}) {
+    // 如果已经初始化过，只更新 token（如果提供）
+    if (_isInitialized) {
+      if (token != null) {
+        _dio.options.headers['Authorization'] = 'Bearer $token';
+      }
+      return;
+    }
+
+    // 首次初始化
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl ?? ApiConfig.apiBaseUrl,
       connectTimeout: const Duration(milliseconds: ApiConfig.connectTimeout),
@@ -50,6 +60,8 @@ class ApiClient {
         handler.next(error);
       },
     ));
+
+    _isInitialized = true;
   }
 
   /// 设置 Token

@@ -1,10 +1,39 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
 import 'package:aif2f/components/button/primary_button.dart';
 import 'package:aif2f/data/services/verification_service.dart';
 import 'package:aif2f/data/models/verification_model.dart';
+import 'package:aif2f/data/services/toast_service.dart';
+
+/// 清理错误信息，移除技术性前缀和符号
+String _cleanErrorMessage(String errorMsg) {
+  // 移除常见的异常前缀
+  errorMsg = errorMsg.replaceAll('Exception: ', '');
+  errorMsg = errorMsg.replaceAll('Error: ', '');
+
+  // 移除 Dio 相关的技术性前缀
+  errorMsg = errorMsg.replaceAll(RegExp(r'_dio@\w+:\s*'), '');
+  errorMsg = errorMsg.replaceAll(RegExp(r'DioException:\s*'), '');
+  errorMsg = errorMsg.replaceAll(RegExp(r'dio:\s*'), '');
+
+  // 移除 Dart 对象描述
+  errorMsg = errorMsg.replaceAll(RegExp(r'^Instance of\s+'), '');
+
+  // 移除开头的 > 符号和空格（包括多个）
+  errorMsg = errorMsg.replaceAll(RegExp(r'^\s*>\s*'), '');
+  errorMsg = errorMsg.replaceAll(RegExp(r'^>\s*'), '');
+
+  // 移除可能的换行符和多余空格
+  errorMsg = errorMsg.replaceAll('\n', ' ');
+  errorMsg = errorMsg.replaceAll(RegExp(r'\s+'), ' ');
+  errorMsg = errorMsg.trim();
+
+  // 如果清理后为空，返回默认消息
+  return errorMsg.isNotEmpty ? errorMsg : '操作失败，请稍后重试';
+}
 
 /// 登录对话框
 class LoginDialog extends ConsumerStatefulWidget {
@@ -58,24 +87,33 @@ class _LoginDialogState extends ConsumerState<LoginDialog> {
 
   // 发送验证码
   Future<void> _sendVerificationCode() async {
+    // 防止重复发送：如果正在倒计时，直接返回
+    if (_countdown > 0) {
+      toastService.showWarning('请等待 $_countdown 秒后再试');
+      return;
+    }
+
     // 注册模式使用邮箱
     final email = _emailController.text.trim();
 
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先输入邮箱'), backgroundColor: Colors.orange),
-      );
+      toastService.showWarning('请先输入邮箱');
       return;
     }
 
     // 简单的邮箱格式验证
     if (!email.contains('@') || !email.contains('.')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入有效的邮箱地址'), backgroundColor: Colors.orange),
-      );
+      toastService.showWarning('请输入有效的邮箱地址');
       return;
     }
 
+    // 立即开始倒计时，不等待API返回
+    setState(() {
+      _countdown = 60;
+    });
+    _startCountdown();
+
+    // 异步发送验证码
     try {
       final verificationService = VerificationService();
       await verificationService.sendVerificationCode(
@@ -85,20 +123,12 @@ class _LoginDialogState extends ConsumerState<LoginDialog> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('验证码已发送，请查收邮箱'), backgroundColor: Colors.green),
-      );
-
-      // 开始倒计时
-      setState(() {
-        _countdown = 60;
-      });
-      _startCountdown();
+      toastService.showSuccess('验证码已发送，请查收邮箱');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-      );
+      // 发送失败，但倒计时继续，避免频繁点击
+      final errorMsg = _cleanErrorMessage(e.toString());
+      toastService.showWarning(errorMsg);
     }
   }
 
@@ -135,10 +165,9 @@ class _LoginDialogState extends ConsumerState<LoginDialog> {
       widget.onLoginSuccess?.call();
     } else {
       // 显示错误信息
-      final errorMsg = ref.read(authProvider).errorMessage ?? '登录失败';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
+      final rawErrorMsg = ref.read(authProvider).errorMessage ?? '登录失败';
+      final errorMsg = _cleanErrorMessage(rawErrorMsg);
+      toastService.showError(errorMsg);
     }
   }
 
@@ -147,35 +176,77 @@ class _LoginDialogState extends ConsumerState<LoginDialog> {
       return;
     }
 
+    if (kDebugMode) {
+      print('🎯 [LoginDialog] 开始处理注册');
+    }
+
     final authNotifier = ref.read(authProvider.notifier);
     final username = _usernameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final verificationCode = _verificationCodeController.text.trim();
+
+    if (kDebugMode) {
+      print('📥 [LoginDialog] 注册表单数据:');
+      print('  - 用户名: $username');
+      print('  - 邮箱: $email');
+      print('  - 密码: ${password.length > 0 ? "***" : ""}');
+      print('  - 验证码: $verificationCode');
+    }
 
     final success = await authNotifier.register(
       username,
       email,
       password,
+      verificationCode,
     );
+
+    if (kDebugMode) {
+      print('📤 [LoginDialog] authNotifier.register() 返回: $success');
+    }
 
     if (!mounted) return;
 
     if (success) {
-      // 注册成功，关闭对话框
-      Navigator.of(context).pop(true);
-      widget.onLoginSuccess?.call();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('注册成功'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (kDebugMode) {
+        print('✅ [LoginDialog] 注册成功，显示成功提示');
+      }
+
+      // 注册成功，先显示提示，再关闭对话框
+      toastService.showSuccess('注册成功');
+
+      // 延迟关闭对话框，让用户看到成功提示
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          if (kDebugMode) {
+            print('🚪 [LoginDialog] 关闭对话框');
+          }
+          Navigator.of(context).pop(true);
+          widget.onLoginSuccess?.call();
+        }
+      });
     } else {
+      if (kDebugMode) {
+        print('❌ [LoginDialog] 注册失败，显示错误信息');
+      }
+
       // 显示错误信息
-      final errorMsg = ref.read(authProvider).errorMessage ?? '注册失败';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
+      final authState = ref.read(authProvider);
+      final rawErrorMsg = authState.errorMessage ?? '注册失败';
+      if (kDebugMode) {
+        print('❌ [LoginDialog] AuthState 错误: $rawErrorMsg');
+      }
+
+      final errorMsg = _cleanErrorMessage(rawErrorMsg);
+      if (kDebugMode) {
+        print('❌ [LoginDialog] 清理后的错误: $errorMsg');
+      }
+
+      toastService.showError(errorMsg);
+    }
+
+    if (kDebugMode) {
+      print('🏁 [LoginDialog] _handleRegister() 结束');
     }
   }
 

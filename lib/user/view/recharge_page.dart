@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/providers/payment_provider.dart';
 import 'package:aif2f/data/providers/qixiang_pay_provider.dart';
+import 'package:aif2f/data/services/toast_service.dart';
+import 'package:aif2f/core/widgets/auth_required.dart';
 
 /// 充值页面
 @RoutePage()
@@ -36,12 +38,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
 
   Future<void> _handlePayment(PaymentType type) async {
     if (_selectedAmount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('请选择充值金额'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      toastService.showWarning('请选择充值金额');
       return;
     }
 
@@ -82,9 +79,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
       final errorMsg = type == PaymentType.wechat
           ? ref.read(qixiangPayProvider).errorMessage ?? '创建订单失败'
           : ref.read(paymentProvider).errorMessage ?? '创建订单失败';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
+      toastService.showError(errorMsg);
     }
   }
 
@@ -109,12 +104,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
         mode: LaunchMode.externalApplication,
       );
       if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('无法打开支付页面，请稍后重试'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        toastService.showWarning('无法打开支付页面，请稍后重试');
       }
     }
   }
@@ -197,139 +187,140 @@ class _RechargePageState extends ConsumerState<RechargePage> {
       final errorMsg = type == PaymentType.wechat
           ? ref.read(qixiangPayProvider).errorMessage ?? '支付失败'
           : ref.read(paymentProvider).errorMessage ?? '支付失败';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
+      toastService.showError(errorMsg);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('账户充值'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 余额显示
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      '账户余额',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      '¥0.00',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+    // 使用 AuthRequired 组件保护需要登录的页面
+    return AuthRequired(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('账户充值'),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 余额显示
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '账户余额',
+                        style: TextStyle(fontSize: 16),
                       ),
-                    ),
-                  ],
+                      Text(
+                        '¥0.00',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // 选择充值金额
-            const Text(
-              '选择充值金额',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              // 选择充值金额
+              const Text(
+                '选择充值金额',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // 预设金额网格
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 2,
-              ),
-              itemCount: _presetAmounts.length,
-              itemBuilder: (context, index) {
-                final amount = _presetAmounts[index];
-                final isSelected = _selectedAmount == amount;
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedAmount = amount;
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
+              // 预设金额网格
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 2,
+                ),
+                itemCount: _presetAmounts.length,
+                itemBuilder: (context, index) {
+                  final amount = _presetAmounts[index];
+                  final isSelected = _selectedAmount == amount;
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedAmount = amount;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      decoration: BoxDecoration(
                         color: isSelected
                             ? Theme.of(context).colorScheme.primary
-                            : Colors.transparent,
-                        width: 2,
+                            : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 2,
+                        ),
                       ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '¥${amount.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : Colors.black87,
+                      child: Center(
+                        child: Text(
+                          '¥${amount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : Colors.black87,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // 支付方式
-            const Text(
-              '选择支付方式',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            // 支付宝
-            _PaymentMethodCard(
-              icon: Icons.account_balance_wallet,
-              title: '支付宝',
-              subtitle: '推荐使用支付宝支付',
-              color: const Color(0xFF1677FF),
-              isSelected: _selectedPaymentType == PaymentType.alipay,
-              onTap: () => _handlePayment(PaymentType.alipay),
-            ),
-            const SizedBox(height: 12),
+              // 支付方式
+              const Text(
+                '选择支付方式',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
 
-            // 微信支付
-            _PaymentMethodCard(
-              icon: Icons.wechat,
-              title: '微信支付',
-              subtitle: '微信安全支付',
-              color: const Color(0xFF07C160),
-              isSelected: _selectedPaymentType == PaymentType.wechat,
-              onTap: () => _handlePayment(PaymentType.wechat),
-            ),
-          ],
+              // 支付宝
+              _PaymentMethodCard(
+                icon: Icons.account_balance_wallet,
+                title: '支付宝',
+                subtitle: '推荐使用支付宝支付',
+                color: const Color(0xFF1677FF),
+                isSelected: _selectedPaymentType == PaymentType.alipay,
+                onTap: () => _handlePayment(PaymentType.alipay),
+              ),
+              const SizedBox(height: 12),
+
+              // 微信支付
+              _PaymentMethodCard(
+                icon: Icons.wechat,
+                title: '微信支付',
+                subtitle: '微信安全支付',
+                color: const Color(0xFF07C160),
+                isSelected: _selectedPaymentType == PaymentType.wechat,
+                onTap: () => _handlePayment(PaymentType.wechat),
+              ),
+            ],
+          ),
         ),
       ),
     );

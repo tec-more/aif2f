@@ -1,8 +1,39 @@
+import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
 import 'package:aif2f/components/button/primary_button.dart';
+import 'package:aif2f/data/services/verification_service.dart';
+import 'package:aif2f/data/models/verification_model.dart';
+import 'package:aif2f/data/services/toast_service.dart';
+
+/// 清理错误信息，移除技术性前缀和符号
+String _cleanErrorMessage(String errorMsg) {
+  // 移除常见的异常前缀
+  errorMsg = errorMsg.replaceAll('Exception: ', '');
+  errorMsg = errorMsg.replaceAll('Error: ', '');
+
+  // 移除 Dio 相关的技术性前缀
+  errorMsg = errorMsg.replaceAll(RegExp(r'_dio@\w+:\s*'), '');
+  errorMsg = errorMsg.replaceAll(RegExp(r'DioException:\s*'), '');
+  errorMsg = errorMsg.replaceAll(RegExp(r'dio:\s*'), '');
+
+  // 移除 Dart 对象描述
+  errorMsg = errorMsg.replaceAll(RegExp(r'^Instance of\s+'), '');
+
+  // 移除开头的 > 符号和空格（包括多个）
+  errorMsg = errorMsg.replaceAll(RegExp(r'^\s*>\s*'), '');
+  errorMsg = errorMsg.replaceAll(RegExp(r'^>\s*'), '');
+
+  // 移除可能的换行符和多余空格
+  errorMsg = errorMsg.replaceAll('\n', ' ');
+  errorMsg = errorMsg.replaceAll(RegExp(r'\s+'), ' ');
+  errorMsg = errorMsg.trim();
+
+  // 如果清理后为空，返回默认消息
+  return errorMsg.isNotEmpty ? errorMsg : '操作失败，请稍后重试';
+}
 
 /// 登录页面
 @RoutePage()
@@ -44,10 +75,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       Navigator.of(context).pop();
     } else {
       // 显示错误信息
-      final errorMsg = ref.read(authProvider).errorMessage ?? '登录失败';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
+      final rawErrorMsg = ref.read(authProvider).errorMessage ?? '登录失败';
+      final errorMsg = _cleanErrorMessage(rawErrorMsg);
+      toastService.showError(errorMsg);
     }
   }
 
@@ -194,8 +224,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _verificationCodeController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
+  // 验证码倒计时
+  int _countdown = 0;
+  Timer? _countdownTimer;
 
   @override
   void dispose() {
@@ -203,7 +238,69 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _verificationCodeController.dispose();
+    _countdownTimer?.cancel();
     super.dispose();
+  }
+
+  // 发送验证码
+  Future<void> _sendVerificationCode() async {
+    // 防止重复发送：如果正在倒计时，直接返回
+    if (_countdown > 0) {
+      toastService.showWarning('请等待 $_countdown 秒后再试');
+      return;
+    }
+
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      toastService.showWarning('请先输入邮箱');
+      return;
+    }
+
+    // 简单的邮箱格式验证
+    if (!email.contains('@') || !email.contains('.')) {
+      toastService.showWarning('请输入有效的邮箱地址');
+      return;
+    }
+
+    // 立即开始倒计时，不等待API返回
+    setState(() {
+      _countdown = 60;
+    });
+    _startCountdown();
+
+    // 异步发送验证码
+    try {
+      final verificationService = VerificationService();
+      await verificationService.sendVerificationCode(
+        email: email,
+        type: VerificationCodeType.register,
+      );
+
+      if (!mounted) return;
+
+      toastService.showSuccess('验证码已发送，请查收邮箱');
+    } catch (e) {
+      if (!mounted) return;
+      // 发送失败，但倒计时继续，避免频繁点击
+      final errorMsg = _cleanErrorMessage(e.toString());
+      toastService.showWarning(errorMsg);
+    }
+  }
+
+  // 开始倒计时
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdown > 0) {
+        setState(() {
+          _countdown--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _handleRegister() async {
@@ -215,26 +312,27 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final username = _usernameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final verificationCode = _verificationCodeController.text.trim();
 
-    final success = await authNotifier.register(username, email, password);
+    final success = await authNotifier.register(username, email, password, verificationCode);
 
     if (!mounted) return;
 
     if (success) {
-      // 注册成功，返回登录页
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('注册成功，请登录'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // 注册成功，先显示提示，再返回登录页
+      toastService.showSuccess('注册成功，请登录');
+
+      // 延迟关闭页面，让用户看到成功提示
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      });
     } else {
       // 显示错误信息
-      final errorMsg = ref.read(authProvider).errorMessage ?? '注册失败';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
+      final rawErrorMsg = ref.read(authProvider).errorMessage ?? '注册失败';
+      final errorMsg = _cleanErrorMessage(rawErrorMsg);
+      toastService.showError(errorMsg);
     }
   }
 
@@ -307,6 +405,50 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 验证码输入框
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _verificationCodeController,
+                          decoration: const InputDecoration(
+                            labelText: '验证码',
+                            prefixIcon: Icon(Icons.verified_user),
+                            border: OutlineInputBorder(),
+                            hintText: '请输入验证码',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return '请输入验证码';
+                            }
+                            if (value.trim().length != 6) {
+                              return '验证码为6位数字';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _countdown > 0 ? null : _sendVerificationCode,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _countdown > 0
+                                ? Colors.grey
+                                : Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text(
+                            _countdown > 0 ? '$_countdown秒后重试' : '发送验证码',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 

@@ -135,6 +135,7 @@ class RegisterRequest {
   final String username;
   final String email;
   final String password;
+  final String code; // 验证码（必填）
   final String? nickname;
   final String? phone;
 
@@ -142,6 +143,7 @@ class RegisterRequest {
     required this.username,
     required this.email,
     required this.password,
+    required this.code,
     this.nickname,
     this.phone,
   });
@@ -151,6 +153,7 @@ class RegisterRequest {
       'username': username,
       'email': email,
       'password': password,
+      'code': code,
       if (nickname != null) 'nickname': nickname,
       if (phone != null) 'phone': phone,
     };
@@ -187,11 +190,19 @@ class TokenResponse {
   });
 
   factory TokenResponse.fromJson(Map<String, dynamic> json) {
+    // 支持 user 和 customer 两种字段名
+    final userJson = json['user'] as Map<String, dynamic>? ??
+                    json['customer'] as Map<String, dynamic>?;
+
+    if (userJson == null) {
+      throw Exception('响应数据中缺少 user 或 customer 字段');
+    }
+
     return TokenResponse(
       accessToken: json['access_token'] as String,
       tokenType: json['token_type'] as String? ?? 'bearer',
       expiresIn: json['expires_in'] as int? ?? 3600,
-      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
+      user: UserModel.fromJson(userJson),
     );
   }
 }
