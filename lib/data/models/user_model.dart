@@ -10,6 +10,8 @@ class UserModel {
   final bool isSuperuser;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  /// 累计充值时长（小时）
+  final int totalHours;
 
   UserModel({
     required this.id,
@@ -22,6 +24,7 @@ class UserModel {
     required this.isSuperuser,
     this.createdAt,
     this.updatedAt,
+    this.totalHours = 0,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -40,6 +43,7 @@ class UserModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null),
+      totalHours: json['total_hours'] as int? ?? json['totalHours'] as int? ?? 0,
     );
   }
 
@@ -55,6 +59,7 @@ class UserModel {
       'is_superuser': isSuperuser,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'total_hours': totalHours,
     };
   }
 
@@ -69,6 +74,7 @@ class UserModel {
     bool? isSuperuser,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? totalHours,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -81,6 +87,7 @@ class UserModel {
       isSuperuser: isSuperuser ?? this.isSuperuser,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      totalHours: totalHours ?? this.totalHours,
     );
   }
 }

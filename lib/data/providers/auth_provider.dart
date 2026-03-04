@@ -4,6 +4,7 @@ import 'package:aif2f/data/models/user_model.dart';
 import 'package:aif2f/data/services/auth_service.dart';
 import 'package:aif2f/data/services/api_client.dart';
 import 'package:aif2f/data/services/token_storage_service.dart';
+import 'package:aif2f/data/providers/membership_provider.dart';
 
 /// API Client Provider
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -136,6 +137,9 @@ class AuthNotifier extends Notifier<AuthState> {
           user: response.user,
         );
 
+        // 同步会员信息
+        ref.read(membershipProvider.notifier).refresh();
+
         return true;
       } else {
         // 使用旧接口登录（用户名）
@@ -154,6 +158,9 @@ class AuthNotifier extends Notifier<AuthState> {
           status: AuthStatus.authenticated,
           user: response.user,
         );
+
+        // 同步会员信息
+        ref.read(membershipProvider.notifier).refresh();
 
         return true;
       }
@@ -200,6 +207,9 @@ class AuthNotifier extends Notifier<AuthState> {
         status: AuthStatus.authenticated,
         user: response.user,
       );
+
+      // 同步会员信息
+      ref.read(membershipProvider.notifier).refresh();
 
       return true;
     } catch (e) {
@@ -298,6 +308,9 @@ class AuthNotifier extends Notifier<AuthState> {
         print('🎉 [AuthProvider] 注册流程完全成功，准备返回 true');
       }
 
+      // 同步会员信息
+      ref.read(membershipProvider.notifier).refresh();
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -384,6 +397,8 @@ class AuthNotifier extends Notifier<AuthState> {
       await _tokenStorage.clearAll();
       // 更新状态
       state = AuthState(status: AuthStatus.unauthenticated);
+      // 清除会员信息
+      ref.read(membershipProvider.notifier).clear();
       if (kDebugMode) {
         print('🚪 Logged out and cleared all auth data');
       }

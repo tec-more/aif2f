@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/core/router/app_router.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/providers/membership_provider.dart';
 import 'package:aif2f/data/services/toast_service.dart';
 
 void main() {
@@ -27,6 +28,8 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   Future<void> _initializeAuth() async {
     await ref.read(authProvider.notifier).initializeAuth();
+    // 初始化会员信息
+    ref.read(membershipProvider.notifier).refresh();
   }
 
   @override

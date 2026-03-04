@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/core/models/fibonacci_membership.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/providers/product_provider.dart';
+import 'package:aif2f/data/models/product_model.dart';
+import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/toast_service.dart';
 
 /// 会员侧边抽屉菜单
@@ -70,7 +73,7 @@ class MemberDrawer extends ConsumerWidget {
               const SizedBox(height: 16),
 
               // 充值入口卡片
-              _buildRechargeSection(context, info),
+              _buildRechargeSection(context, ref, info),
 
               const SizedBox(height: 16),
 
@@ -386,17 +389,13 @@ class MemberDrawer extends ConsumerWidget {
     return '$hours小时';
   }
 
-  /// 构建充值区域 - 按小时充值选项
-  Widget _buildRechargeSection(BuildContext context, FibonacciMembershipInfo info) {
-    // 充值时长选项（小时）- 根据Fibonacci数列设计
-    final rechargeOptions = [
-      {'hours': 1, 'bonus': 0},
-      {'hours': 2, 'bonus': 0},
-      {'hours': 5, 'bonus': 0},
-      {'hours': 10, 'bonus': 0},
-      {'hours': 20, 'bonus': 0},
-      {'hours': 50, 'bonus': 0},
-    ];
+  /// 构建充值区域 - 从后端获取产品列表
+  Widget _buildRechargeSection(BuildContext context, WidgetRef ref, FibonacciMembershipInfo info) {
+    final products = ref.watch(productsProvider);
+
+    if (products.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -434,34 +433,13 @@ class MemberDrawer extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // 充值时长选项
-              ...rechargeOptions.map((option) {
-                final hours = option['hours'] as int;
+              // 产品列表
+              ...products.map((product) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: _buildHourOption(context, hours, info),
+                  child: _buildProductOption(context, ref, product, info),
                 );
               }),
-
-              const SizedBox(height: 12),
-
-              // 充值按钮
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    onRecharge?.call();
-                  },
-                  icon: const Icon(Icons.payment_rounded, size: 18),
-                  label: const Text('立即充值'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -469,22 +447,17 @@ class MemberDrawer extends ConsumerWidget {
     );
   }
 
-  /// 构建小时充值选项
-  Widget _buildHourOption(BuildContext context, int hours, FibonacciMembershipInfo currentInfo) {
-    // 根据充值时长计算赠送时长或折扣
-    final bonusHours = _getBonusHours(hours);
-    final totalHours = hours + bonusHours;
-
+  /// 构建产品充值选项
+  Widget _buildProductOption(BuildContext context, WidgetRef ref, ProductModel product, FibonacciMembershipInfo currentInfo) {
     // 计算充值后的等级
-    final newTotalHours = currentInfo.totalHours + totalHours;
+    final newTotalHours = currentInfo.totalHours + product.totalHours;
     final newLevel = FibonacciMembershipSystem.getLevelFromHours(newTotalHours);
     final currentLevel = currentInfo.level;
 
     return InkWell(
       onTap: () {
-        final bonusText = bonusHours > 0 ? " + 赠送$bonusHours小时" : "";
-        final levelUpText = newLevel > currentLevel ? " → LV.$newLevel" : "";
-        toastService.showInfo('已选择：$hours 小时$bonusText，合计$totalHours小时$levelUpText');
+        // 显示支付方式选择对话框
+        _showPaymentMethodDialog(context, ref, product, currentInfo);
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -514,22 +487,22 @@ class MemberDrawer extends ConsumerWidget {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                       Text(
-                        '$hours 小时',
+                        product.name,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                      if (bonusHours > 0)
+                      if (product.hasDiscount)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: Colors.red,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            '+$bonusHours小时赠送',
+                            product.discount ?? '优惠',
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.white,
@@ -556,21 +529,45 @@ class MemberDrawer extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    bonusHours > 0
-                        ? '合计 $totalHours 小时'
-                        : '快速充值',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        '${product.hours}小时',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (product.bonusHours != null && product.bonusHours! > 0) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          '+${product.bonusHours}小时赠送',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.green[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                      if (product.hasDiscount) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '¥${product.originalPrice.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
             Text(
-              '¥${_getHourPrice(hours)}',
+              '¥${product.price.toStringAsFixed(0)}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -583,18 +580,75 @@ class MemberDrawer extends ConsumerWidget {
     );
   }
 
-  /// 计算赠送时长
-  int _getBonusHours(int hours) {
-    if (hours >= 50) return 10; // 充值50小时赠送10小时
-    if (hours >= 20) return 5;  // 充值20小时赠送5小时
-    if (hours >= 10) return 2;  // 充值10小时赠送2小时
-    if (hours >= 5) return 1;   // 充值5小时赠送1小时
-    return 0;
-  }
-
-  /// 计算价格（每小时1元）
-  double _getHourPrice(int hours) {
-    return hours.toDouble();
+  /// 显示支付方式选择对话框
+  void _showPaymentMethodDialog(
+    BuildContext context,
+    WidgetRef ref,
+    ProductModel product,
+    FibonacciMembershipInfo currentInfo,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('选择支付方式'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '购买：${product.name}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '金额：¥${product.price.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '获得：${product.totalHours}小时${product.bonusHours != null && product.bonusHours! > 0 ? " (含${product.bonusHours}小时赠送)" : ""}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Icon(Icons.account_balance_wallet, color: Color(0xFF1677FF)),
+              title: Text('支付宝'),
+              trailing: Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).pop();
+                // TODO: 创建支付宝订单并支付
+                toastService.showInfo('正在创建支付宝订单...');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.wechat, color: Color(0xFF07C160)),
+              title: Text('微信支付'),
+              trailing: Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).pop();
+                // TODO: 创建微信订单并支付
+                toastService.showInfo('正在创建微信订单...');
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('取消'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 构建菜单项
