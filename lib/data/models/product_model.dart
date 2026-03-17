@@ -44,11 +44,11 @@ class ProductModel {
       description: json['description'] as String? ?? '',
       originalPrice: (json['original_price'] as num?)?.toDouble() ?? (json['originalPrice'] as num?)?.toDouble() ?? 0.0,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      hours: json['hours'] as int? ?? json['duration'] as int? ?? 0,
+      hours: json['hours'] as int? ?? json['recharge_hours'] as int? ?? json['duration'] as int? ?? 0,
       bonusHours: json['bonus_hours'] as int? ?? json['bonusHours'] as int?,
-      discount: json['discount'] as String?,
+      discount: json['discount'] as String? ?? json['discount_description'] as String?,
       isActive: json['is_active'] as bool? ?? json['isActive'] as bool? ?? true,
-      sortOrder: json['sort_order'] as int? ?? json['sortOrder'] as int?,
+      sortOrder: json['sort'] as int? ?? json['sort_order'] as int? ?? json['sortOrder'] as int?,
     );
   }
 

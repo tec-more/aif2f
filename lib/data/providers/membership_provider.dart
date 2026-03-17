@@ -37,10 +37,12 @@ class MembershipState {
 class MembershipNotifier extends Notifier<MembershipState> {
   @override
   MembershipState build() {
-    // 初始化时从用户信息中加载会员数据
-    _initFromUser();
+    // 延迟初始化，避免在 build() 中读取 authProvider 造成循环依赖
+    Future.microtask(() {
+      _initFromUser();
+    });
     return MembershipState(
-      membershipInfo: null,
+      membershipInfo: FibonacciMembershipInfo.free(),
       isLoading: false,
     );
   }

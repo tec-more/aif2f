@@ -137,8 +137,10 @@ class AuthNotifier extends Notifier<AuthState> {
           user: response.user,
         );
 
-        // 同步会员信息
-        ref.read(membershipProvider.notifier).refresh();
+        // 延迟同步会员信息，避免循环依赖
+        Future.microtask(() {
+          ref.read(membershipProvider.notifier).refresh();
+        });
 
         return true;
       } else {
@@ -159,8 +161,10 @@ class AuthNotifier extends Notifier<AuthState> {
           user: response.user,
         );
 
-        // 同步会员信息
-        ref.read(membershipProvider.notifier).refresh();
+        // 延迟同步会员信息，避免循环依赖
+        Future.microtask(() {
+          ref.read(membershipProvider.notifier).refresh();
+        });
 
         return true;
       }

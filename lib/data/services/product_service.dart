@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:aif2f/data/models/product_model.dart';
 import 'package:aif2f/data/models/order_model.dart';
 import 'package:aif2f/data/services/api_client.dart';
@@ -15,27 +17,46 @@ class ProductService {
   /// 返回激活的产品列表，按排序字段排序
   Future<List<ProductModel>> getProducts() async {
     try {
-      final response = await _apiClient.get<Map<String, dynamic>>(
-        '/products', // 假设API端点是 /products
-      );
-
+      // 从 API 获取产品数据
+      // 使用 /api/v1/product/list 地址获取产品列表
+      final response = await _apiClient.get<Map<String, dynamic>>('/product/list');
+      
       final data = response.data;
-      if (data == null) return [];
-
-      final List<dynamic> productsJson = data['products'] as List<dynamic>? ?? data as List<dynamic>? ?? [];
-
+      if (data == null) return _getDefaultProducts();
+      
+      // API 返回的数据结构中，产品列表在 data['items'] 中
+      final dataMap = data['data'] as Map<String, dynamic>?;
+      final List<dynamic> productsJson = dataMap?['items'] as List<dynamic>? ?? [];
+      
       final products = productsJson
           .map((json) => ProductModel.fromJson(json as Map<String, dynamic>))
           .where((product) => product.isActive)
-          .toList()
-        ..sort((a, b) => (a.sortOrder ?? 999).compareTo(b.sortOrder ?? 999));
-
+          .toList();
+      
+      // 按 sort 字段从小到大排序
+      products.sort((a, b) {
+        // 尝试从不同字段获取排序值
+        // 首先尝试 sortOrder 字段
+        final aSort = a.sortOrder ?? 0;
+        final bSort = b.sortOrder ?? 0;
+        
+        // 如果 sortOrder 相同，使用 id 字段作为排序依据
+        if (aSort == bSort) {
+          return a.id.compareTo(b.id);
+        }
+        
+        return aSort.compareTo(bSort);
+      });
+      
       return products;
     } catch (e) {
       // 如果获取失败，返回默认产品列表
+      print('获取产品列表失败: $e');
       return _getDefaultProducts();
     }
   }
+  
+
 
   /// 创建订单
   /// [productId] 产品ID

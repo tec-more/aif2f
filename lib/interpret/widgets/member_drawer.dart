@@ -1,11 +1,15 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:aif2f/core/models/fibonacci_membership.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
 import 'package:aif2f/data/providers/product_provider.dart';
 import 'package:aif2f/data/models/product_model.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/toast_service.dart';
+import 'package:aif2f/data/services/qixiang_pay_service.dart';
+import 'package:aif2f/core/widgets/payment_dialog.dart';
 
 /// 会员侧边抽屉菜单
 /// 显示会员等级、累计时长和充值入口（基于Fibonacci数列）
@@ -37,7 +41,6 @@ class MemberDrawer extends ConsumerWidget {
 
   /// 关于回调
   final VoidCallback? onAbout;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 使用提供的会员信息，或使用默认的免费用户
@@ -160,10 +163,7 @@ class MemberDrawer extends ConsumerWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            levelColor,
-            levelColor.withOpacity(0.7),
-          ],
+          colors: [levelColor, levelColor.withOpacity(0.7)],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -181,20 +181,22 @@ class MemberDrawer extends ConsumerWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      levelIcon,
-                      color: Colors.white,
-                      size: 16,
-                    ),
+                    Icon(levelIcon, color: Colors.white, size: 16),
                     const SizedBox(width: 6),
                     Text(
                       'LV.$level',
@@ -219,7 +221,10 @@ class MemberDrawer extends ConsumerWidget {
               const Spacer(),
               // 累计时长显示
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -316,7 +321,10 @@ class MemberDrawer extends ConsumerWidget {
   }
 
   /// 构建特权列表
-  Widget _buildPrivilegesList(BuildContext context, FibonacciMembershipInfo info) {
+  Widget _buildPrivilegesList(
+    BuildContext context,
+    FibonacciMembershipInfo info,
+  ) {
     final privileges = info.privileges;
     final displayPrivileges = privileges.take(5).toList();
 
@@ -338,28 +346,30 @@ class MemberDrawer extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ...displayPrivileges.map((privilege) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.white.withOpacity(0.8),
-                  size: 12,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    privilege,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.85),
-                      fontSize: 11,
+          ...displayPrivileges.map(
+            (privilege) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.white.withOpacity(0.8),
+                    size: 12,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      privilege,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.85),
+                        fontSize: 11,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          )),
+          ),
           if (privileges.length > 5)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -390,7 +400,11 @@ class MemberDrawer extends ConsumerWidget {
   }
 
   /// 构建充值区域 - 从后端获取产品列表
-  Widget _buildRechargeSection(BuildContext context, WidgetRef ref, FibonacciMembershipInfo info) {
+  Widget _buildRechargeSection(
+    BuildContext context,
+    WidgetRef ref,
+    FibonacciMembershipInfo info,
+  ) {
     final products = ref.watch(productsProvider);
 
     if (products.isEmpty) {
@@ -448,7 +462,12 @@ class MemberDrawer extends ConsumerWidget {
   }
 
   /// 构建产品充值选项
-  Widget _buildProductOption(BuildContext context, WidgetRef ref, ProductModel product, FibonacciMembershipInfo currentInfo) {
+  Widget _buildProductOption(
+    BuildContext context,
+    WidgetRef ref,
+    ProductModel product,
+    FibonacciMembershipInfo currentInfo,
+  ) {
     // 计算充值后的等级
     final newTotalHours = currentInfo.totalHours + product.totalHours;
     final newLevel = FibonacciMembershipSystem.getLevelFromHours(newTotalHours);
@@ -463,7 +482,9 @@ class MemberDrawer extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1),
+          color: Theme.of(
+            context,
+          ).colorScheme.primaryContainer.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: Theme.of(context).colorScheme.outlineVariant,
@@ -496,7 +517,10 @@ class MemberDrawer extends ConsumerWidget {
                       ),
                       if (product.hasDiscount)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red,
                             borderRadius: BorderRadius.circular(4),
@@ -512,7 +536,10 @@ class MemberDrawer extends ConsumerWidget {
                         ),
                       if (newLevel > currentLevel)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange,
                             borderRadius: BorderRadius.circular(4),
@@ -538,7 +565,8 @@ class MemberDrawer extends ConsumerWidget {
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      if (product.bonusHours != null && product.bonusHours! > 0) ...[
+                      if (product.bonusHours != null &&
+                          product.bonusHours! > 0) ...[
                         const SizedBox(width: 4),
                         Text(
                           '+${product.bonusHours}小时赠送',
@@ -597,18 +625,12 @@ class MemberDrawer extends ConsumerWidget {
           children: [
             Text(
               '购买：${product.name}',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               '金额：¥${product.price.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             const SizedBox(height: 4),
             Text(
@@ -619,24 +641,15 @@ class MemberDrawer extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: Icon(Icons.account_balance_wallet, color: Color(0xFF1677FF)),
-              title: Text('支付宝'),
-              trailing: Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).pop();
-                // TODO: 创建支付宝订单并支付
-                toastService.showInfo('正在创建支付宝订单...');
-              },
-            ),
+            // 只显示微信支付选项
             ListTile(
               leading: Icon(Icons.wechat, color: Color(0xFF07C160)),
               title: Text('微信支付'),
               trailing: Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.of(context).pop();
-                // TODO: 创建微信订单并支付
-                toastService.showInfo('正在创建微信订单...');
+                // 显示微信支付二维码
+                _showWeChatPaymentQRCode(context, product);
               },
             ),
           ],
@@ -651,6 +664,47 @@ class MemberDrawer extends ConsumerWidget {
     );
   }
 
+  /// 显示微信支付二维码
+  void _showWeChatPaymentQRCode(BuildContext context, ProductModel product) {
+    showDialog(
+      context: context,
+      builder: (context) => FutureBuilder<QixiangPayOrder>(
+        future: _createWeChatOrder(product),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('支付订单创建失败: ${snapshot.error}'));
+          } else if (snapshot.hasData) {
+            final order = snapshot.data!;
+            final String payUrl = order.qrcode ?? order.payUrl ?? '';
+            return PaymentDialog(
+              title: '微信支付',
+              url: payUrl,
+              onClose: () => Navigator.of(context).pop(),
+            );
+          } else {
+            return Center(child: Text('未知错误'));
+          }
+        },
+      ),
+    );
+  }
+
+  /// 创建微信支付订单
+  Future<QixiangPayOrder> _createWeChatOrder(ProductModel product) async {
+    final qixiangPayService = QixiangPayService();
+    final outTradeNo =
+        'order_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(10000)}';
+
+    return await qixiangPayService.createOrder(
+      type: PaymentType.wechat,
+      outTradeNo: outTradeNo,
+      money: product.price,
+      name: product.name,
+    );
+  }
+
   /// 构建菜单项
   Widget _buildMenuItem(
     BuildContext context, {
@@ -662,9 +716,7 @@ class MemberDrawer extends ConsumerWidget {
       leading: Icon(icon),
       title: Text(title),
       onTap: onTap,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 
@@ -674,9 +726,7 @@ class MemberDrawer extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          Divider(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
+          Divider(color: Theme.of(context).colorScheme.outlineVariant),
           const SizedBox(height: 8),
           Text(
             'AI传译 v1.0.0',
@@ -687,7 +737,7 @@ class MemberDrawer extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '© 2025 All Rights Reserved',
+            '© ${DateTime.now().year} All Rights Reserved',
             style: TextStyle(
               fontSize: 10,
               color: Theme.of(context).colorScheme.onSurfaceVariant,

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/core/router/app_router.dart';
@@ -6,6 +7,8 @@ import 'package:aif2f/data/providers/membership_provider.dart';
 import 'package:aif2f/data/services/toast_service.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -55,9 +58,7 @@ class _MyAppState extends ConsumerState<MyApp> {
         return Navigator(
           key: ToastService.navigatorKey,
           onGenerateRoute: (settings) {
-            return MaterialPageRoute(
-              builder: (context) => child!,
-            );
+            return MaterialPageRoute(builder: (context) => child!);
           },
         );
       },

@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   flutter_f2f_sound
+  flutter_inappwebview_windows
   url_launcher_windows
 )
 

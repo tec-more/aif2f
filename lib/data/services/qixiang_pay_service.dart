@@ -36,11 +36,21 @@ class QixiangPayService {
     final sortedKeys = filteredParams.keys.toList()..sort();
 
     // 3. 拼接成 key=value&key=value 格式
-    final signStr = sortedKeys.map((key) => '$key=${filteredParams[key]}').join('&');
+    final signStr = sortedKeys
+        .map((key) => '$key=${filteredParams[key]}')
+        .join('&');
 
-    // 4. 加上商户密钥KEY进行MD5加密
+    // 4. 加上商户密钥KEY进行MD5加密（直接拼接，不使用&key=格式）
     final finalStr = '$signStr${QixiangPayConfig.key}';
-    final sign = md5.convert(utf8.encode(finalStr)).toString();
+    final sign = md5.convert(utf8.encode(finalStr)).toString().toLowerCase();
+
+    // 打印签名生成过程
+    print('🔐 签名生成过程:');
+    print('   过滤后参数: $filteredParams');
+    print('   排序后键: $sortedKeys');
+    print('   拼接字符串: $signStr');
+    print('   最终字符串: $finalStr');
+    print('   生成签名: $sign');
 
     return sign;
   }
@@ -58,40 +68,71 @@ class QixiangPayService {
         ? QixiangPayConfig.alipayType
         : QixiangPayConfig.wechatType;
 
+    // 使用更简单的notify_url和return_url，避免URL编码问题
+    final notifyUrl = 'http://localhost:9998/api/qixiang-pay/notify';
+    final returnUrl = 'http://localhost:9998/recharge/result';
+
     final params = <String, dynamic>{
       'pid': QixiangPayConfig.pid,
       'type': paymentType,
       'out_trade_no': outTradeNo,
-      'notify_url': QixiangPayConfig.notifyUrl,
-      'return_url': QixiangPayConfig.returnUrl,
+      'notify_url': notifyUrl,
+      'return_url': returnUrl,
       'name': name,
       'money': money.toStringAsFixed(2),
       'clientip': clientIp ?? '127.0.0.1',
       'device': QixiangPayConfig.deviceType,
-      if (param != null && param.isNotEmpty) 'param': param,
       'sign_type': QixiangPayConfig.signType,
     };
 
+    // 打印请求参数
+    print('📝 微信支付请求参数: $params');
+
     // 生成签名
-    params['sign'] = _generateSign(params);
+    final sign = _generateSign(params);
+    params['sign'] = sign;
+
+    // 打印签名
+    print('🔐 生成的签名: $sign');
 
     try {
+      print('🚀 发送支付请求到: ${QixiangPayConfig.gatewayUrl}');
       final response = await _dio.post(
         QixiangPayConfig.gatewayUrl,
         data: FormData.fromMap(params),
-        options: Options(
-          contentType: 'application/x-www-form-urlencoded',
-        ),
+        options: Options(contentType: 'application/x-www-form-urlencoded'),
       );
 
-      final data = response.data as Map<String, dynamic>;
+      print('✅ 支付请求响应: ${response.data}');
 
-      if (data['code'] == 1) {
-        return QixiangPayOrder.fromJson(data);
+      // 检查response.data的类型
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+
+        if (data['code'] == 1) {
+          return QixiangPayOrder.fromJson(data);
+        } else {
+          print('❌ 支付请求失败: ${data['msg']}');
+          throw Exception(data['msg'] ?? '创建订单失败');
+        }
       } else {
-        throw Exception(data['msg'] ?? '创建订单失败');
+        // 如果是字符串，尝试解析为JSON
+        try {
+          final data = jsonDecode(response.data) as Map<String, dynamic>;
+          if (data['code'] == 1) {
+            return QixiangPayOrder.fromJson(data);
+          } else {
+            print('❌ 支付请求失败: ${data['msg']}');
+            throw Exception(data['msg'] ?? '创建订单失败');
+          }
+        } catch (e) {
+          print('❌ 响应解析失败: $e');
+          throw Exception('支付请求失败: 响应格式错误');
+        }
       }
     } on DioException catch (e) {
+      print('❌ 网络错误: ${e.message}');
+      print('❌ 错误详情: ${e.response}');
       throw _handleDioError(e);
     }
   }
@@ -144,7 +185,8 @@ class QixiangPayService {
     String? outTradeNo,
     required double money,
   }) async {
-    if ((tradeNo == null || tradeNo.isEmpty) && (outTradeNo == null || outTradeNo.isEmpty)) {
+    if ((tradeNo == null || tradeNo.isEmpty) &&
+        (outTradeNo == null || outTradeNo.isEmpty)) {
       throw Exception('订单号不能为空');
     }
 
@@ -154,7 +196,8 @@ class QixiangPayService {
       'key': QixiangPayConfig.key,
       'money': money.toStringAsFixed(2),
       if (tradeNo != null && tradeNo.isNotEmpty) 'trade_no': tradeNo,
-      if (outTradeNo != null && outTradeNo.isNotEmpty) 'out_trade_no': outTradeNo,
+      if (outTradeNo != null && outTradeNo.isNotEmpty)
+        'out_trade_no': outTradeNo,
     };
 
     try {
@@ -310,10 +353,7 @@ class QixiangPayRefundResult {
   final int code;
   final String? msg;
 
-  QixiangPayRefundResult({
-    required this.code,
-    this.msg,
-  });
+  QixiangPayRefundResult({required this.code, this.msg});
 
   factory QixiangPayRefundResult.fromJson(Map<String, dynamic> json) {
     return QixiangPayRefundResult(

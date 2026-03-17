@@ -64,15 +64,8 @@ class _LoginDialogState extends ConsumerState<LoginDialog> {
   @override
   void initState() {
     super.initState();
-    // 延迟执行，避免在 widget tree 构建时修改 provider
-    Future(() {
-      // 如果当前状态是 loading，重置为未认证状态
-      // 这是为了解决应用启动时自动登录卡住的问题
-      final authState = ref.read(authProvider);
-      if (authState.status == AuthStatus.loading && mounted) {
-        ref.read(authProvider.notifier).resetToUnauthenticated();
-      }
-    });
+    // 不需要在这里重置状态
+    // 如果登录卡住，用户可以点击取消按钮关闭对话框
   }
 
   @override
