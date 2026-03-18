@@ -16,37 +16,59 @@ class UserMenu extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final membership = ref.watch(currentMembershipProvider);
     final user = authState.user;
+    final isLoggedIn = authState.isAuthenticated;
 
     return PopupMenuButton<String>(
       onSelected: (value) {
         switch (value) {
           case 'profile':
-            // 使用路由导航到个人信息页面
-            context.router.push(ProfileRoute());
+            if (isLoggedIn) {
+              // 使用路由导航到个人信息页面
+              context.router.push(ProfileRoute());
+            } else {
+              // 未登录时跳转到登录页面
+              context.router.push(LoginRoute());
+            }
             break;
           case 'settings':
-            // 使用路由导航到设置页面
-            context.router.push(SettingsRoute());
+            if (isLoggedIn) {
+              // 使用路由导航到设置页面
+              context.router.push(SettingsRoute());
+            } else {
+              // 未登录时跳转到登录页面
+              context.router.push(LoginRoute());
+            }
             break;
           case 'about':
             // 使用路由导航到关于页面
             context.router.push(AboutRoute());
             break;
           case 'orders':
-            // 显示订单对话框
-            showDialog(
-              context: context,
-              builder: (context) => const OrdersDialog(),
-            );
+            if (isLoggedIn) {
+              // 显示订单对话框
+              showDialog(
+                context: context,
+                builder: (context) => const OrdersDialog(),
+              );
+            } else {
+              // 未登录时跳转到登录页面
+              context.router.push(LoginRoute());
+            }
             break;
           case 'logout':
             _showLogoutConfirmation(context, ref);
             break;
+          case 'login':
+            // 跳转到登录页面
+            context.router.push(LoginRoute());
+            break;
         }
       },
       itemBuilder: (context) {
-        return [
-          // 用户信息和会员等级头部
+        final List<PopupMenuEntry<String>> items = [];
+
+        // 用户信息和会员等级头部
+        items.add(
           PopupMenuItem(
             enabled: false,
             child: Column(
@@ -54,7 +76,9 @@ class UserMenu extends ConsumerWidget {
               children: [
                 // 用户名
                 Text(
-                  user?.nickname ?? user?.username ?? '未知用户',
+                  isLoggedIn
+                      ? (user?.nickname ?? user?.username ?? '未知用户')
+                      : '未登录',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -63,7 +87,10 @@ class UserMenu extends ConsumerWidget {
                 const SizedBox(height: 4),
                 // 会员等级标签
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: membership.levelColor,
                     borderRadius: BorderRadius.circular(12),
@@ -71,11 +98,7 @@ class UserMenu extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        membership.levelIcon,
-                        color: Colors.white,
-                        size: 14,
-                      ),
+                      Icon(membership.levelIcon, color: Colors.white, size: 14),
                       const SizedBox(width: 4),
                       Text(
                         'LV.${membership.level} ${membership.levelTitle}',
@@ -92,25 +115,23 @@ class UserMenu extends ConsumerWidget {
                 // 累计时长
                 Text(
                   '累计时长: ${_formatHours(membership.totalHours)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 if (membership.level == 0) ...[
                   const SizedBox(height: 4),
                   Text(
                     '再充值 ${membership.hoursToNextLevel} 小时升级到 LV.1',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.blue[600],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.blue[600]),
                   ),
                 ],
               ],
             ),
           ),
-          const PopupMenuDivider(),
+        );
+
+        items.add(const PopupMenuDivider());
+
+        items.add(
           PopupMenuItem(
             value: 'profile',
             child: Row(
@@ -121,6 +142,9 @@ class UserMenu extends ConsumerWidget {
               ],
             ),
           ),
+        );
+
+        items.add(
           PopupMenuItem(
             value: 'settings',
             child: Row(
@@ -131,6 +155,9 @@ class UserMenu extends ConsumerWidget {
               ],
             ),
           ),
+        );
+
+        items.add(
           PopupMenuItem(
             value: 'about',
             child: Row(
@@ -141,6 +168,9 @@ class UserMenu extends ConsumerWidget {
               ],
             ),
           ),
+        );
+
+        items.add(
           PopupMenuItem(
             value: 'orders',
             child: Row(
@@ -151,18 +181,41 @@ class UserMenu extends ConsumerWidget {
               ],
             ),
           ),
-          const PopupMenuDivider(),
-          PopupMenuItem(
-            value: 'logout',
-            child: Row(
-              children: const [
-                Icon(Icons.logout, color: Colors.black),
-                SizedBox(width: 10),
-                Text('退出登录'),
-              ],
+        );
+
+        items.add(const PopupMenuDivider());
+
+        if (isLoggedIn) {
+          // 已登录显示退出登录
+          items.add(
+            PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: const [
+                  Icon(Icons.logout, color: Colors.black),
+                  SizedBox(width: 10),
+                  Text('退出登录'),
+                ],
+              ),
             ),
-          ),
-        ];
+          );
+        } else {
+          // 未登录显示登录
+          items.add(
+            PopupMenuItem(
+              value: 'login',
+              child: Row(
+                children: const [
+                  Icon(Icons.login, color: Colors.black),
+                  SizedBox(width: 10),
+                  Text('登录'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return items;
       },
       tooltip: '用户菜单',
       // 使用child确保图标在悬停时仍然可见
@@ -176,7 +229,10 @@ class UserMenu extends ConsumerWidget {
                 right: 0,
                 top: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: membership.levelColor,
                     borderRadius: BorderRadius.circular(8),

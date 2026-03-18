@@ -2,9 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:auto_route/auto_route.dart';
 import 'package:aif2f/core/models/fibonacci_membership.dart';
-import 'package:aif2f/core/router/app_router.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
 import 'package:aif2f/data/providers/product_provider.dart';
 import 'package:aif2f/data/models/product_model.dart';
@@ -12,12 +10,19 @@ import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/toast_service.dart';
 import 'package:aif2f/data/services/qixiang_pay_service.dart';
 import 'package:aif2f/core/widgets/payment_dialog.dart';
-import 'package:aif2f/data/utils/auth_helper.dart';
 
-/// 会员侧边抽屉菜单
+/// 会员弹出层组件
 /// 显示会员等级、累计时长和充值入口（基于Fibonacci数列）
-class MemberDrawer extends ConsumerWidget {
-  const MemberDrawer({
+class MemberPopup extends ConsumerWidget {
+  final FibonacciMembershipInfo? membershipInfo;
+  final VoidCallback? onRecharge;
+  final VoidCallback? onProfile;
+  final VoidCallback? onSettings;
+  final VoidCallback? onHelp;
+  final VoidCallback? onAbout;
+  final VoidCallback onClose;
+
+  const MemberPopup({
     super.key,
     this.membershipInfo,
     this.onRecharge,
@@ -25,31 +30,11 @@ class MemberDrawer extends ConsumerWidget {
     this.onSettings,
     this.onHelp,
     this.onAbout,
+    required this.onClose,
   });
 
-  /// 会员信息（基于Fibonacci数列）
-  final FibonacciMembershipInfo? membershipInfo;
-
-  /// 充值回调
-  final VoidCallback? onRecharge;
-
-  /// 个人资料回调
-  final VoidCallback? onProfile;
-
-  /// 设置回调
-  final VoidCallback? onSettings;
-
-  /// 帮助回调
-  final VoidCallback? onHelp;
-
-  /// 关于回调
-  final VoidCallback? onAbout;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 获取认证状态
-    final authState = ref.watch(authProvider);
-    final isLoggedIn = authState.isAuthenticated;
-
     // 使用提供的会员信息，或使用默认的免费用户
     final info = membershipInfo ?? FibonacciMembershipInfo.free();
     final level = info.level;
@@ -60,103 +45,130 @@ class MemberDrawer extends ConsumerWidget {
     final hoursToNext = info.hoursToNextLevel;
     final progress = info.progress;
 
-    return Drawer(
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        color: Theme.of(context).colorScheme.surface,
-        child: SafeArea(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              // 头部 - 会员信息卡片
-              _buildMemberHeader(
-                context,
-                info,
-                level,
-                levelTitle,
-                levelColor,
-                levelIcon,
-                totalHours,
-                hoursToNext,
-                progress,
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.9,
+        child: Column(
+          children: [
+            // 标题栏
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    width: 1,
+                  ),
+                ),
               ),
-
-              const SizedBox(height: 16),
-
-              // 充值入口卡片
-              _buildRechargeSection(context, ref, info),
-
-              const SizedBox(height: 16),
-
-              // 菜单列表
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Text(
+                    '会员中心',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: onClose,
+                  ),
+                ],
+              ),
+            ),
+            // 内容区域
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.zero,
                 child: Column(
                   children: [
-                    _buildMenuItem(
+                    // 头部 - 会员信息卡片
+                    _buildMemberHeader(
                       context,
-                      icon: Icons.person_outline,
-                      title: '个人资料',
-                      onTap: () {
-                        Navigator.pop(context);
-                        onProfile?.call();
-                      },
+                      info,
+                      level,
+                      levelTitle,
+                      levelColor,
+                      levelIcon,
+                      totalHours,
+                      hoursToNext,
+                      progress,
                     ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.settings_outlined,
-                      title: '设置',
-                      onTap: () {
-                        Navigator.pop(context);
-                        onSettings?.call();
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.help_outline,
-                      title: '帮助与反馈',
-                      onTap: () {
-                        Navigator.pop(context);
-                        onHelp?.call();
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.info_outline,
-                      title: '关于',
-                      onTap: () {
-                        Navigator.pop(context);
-                        onAbout?.call();
-                      },
-                    ),
-                    isLoggedIn
-                        ? _buildMenuItem(
+
+                    const SizedBox(height: 16),
+
+                    // 充值入口卡片
+                    _buildRechargeSection(context, ref, info),
+
+                    const SizedBox(height: 16),
+
+                    // 菜单列表
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: [
+                          _buildMenuItem(
+                            context,
+                            icon: Icons.person_outline,
+                            title: '个人资料',
+                            onTap: () {
+                              onClose();
+                              onProfile?.call();
+                            },
+                          ),
+                          _buildMenuItem(
+                            context,
+                            icon: Icons.settings_outlined,
+                            title: '设置',
+                            onTap: () {
+                              onClose();
+                              onSettings?.call();
+                            },
+                          ),
+                          _buildMenuItem(
+                            context,
+                            icon: Icons.help_outline,
+                            title: '帮助与反馈',
+                            onTap: () {
+                              onClose();
+                              onHelp?.call();
+                            },
+                          ),
+                          _buildMenuItem(
+                            context,
+                            icon: Icons.info_outline,
+                            title: '关于',
+                            onTap: () {
+                              onClose();
+                              onAbout?.call();
+                            },
+                          ),
+                          _buildMenuItem(
                             context,
                             icon: Icons.logout,
                             title: '退出登录',
                             onTap: () async {
-                              await _handleLogout(context, ref);
-                            },
-                          )
-                        : _buildMenuItem(
-                            context,
-                            icon: Icons.login,
-                            title: '登录',
-                            onTap: () {
-                              Navigator.pop(context);
-                              // 显示登录对话框
-                              checkLogin(context, ref);
+                              await _handleLogout(context, ref, onClose);
                             },
                           ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 底部版本信息
+                    _buildFooter(context),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // 底部版本信息
-              _buildFooter(context),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -767,7 +779,7 @@ class MemberDrawer extends ConsumerWidget {
   }
 
   /// 处理退出登录
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref, VoidCallback onClose) async {
     // 显示确认对话框
     final confirmed = await showDialog<bool>(
       context: context,
@@ -792,9 +804,34 @@ class MemberDrawer extends ConsumerWidget {
       await ref.read(authProvider.notifier).logout();
 
       if (context.mounted) {
-        Navigator.pop(context); // 关闭抽屉
+        onClose(); // 关闭弹出层
         toastService.showSuccess('已退出登录');
       }
     }
   }
+}
+
+/// 显示会员弹出层的工具方法
+void showMemberPopup({
+  required BuildContext context,
+  FibonacciMembershipInfo? membershipInfo,
+  VoidCallback? onRecharge,
+  VoidCallback? onProfile,
+  VoidCallback? onSettings,
+  VoidCallback? onHelp,
+  VoidCallback? onAbout,
+}) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (context) => MemberPopup(
+      membershipInfo: membershipInfo,
+      onRecharge: onRecharge,
+      onProfile: onProfile,
+      onSettings: onSettings,
+      onHelp: onHelp,
+      onAbout: onAbout,
+      onClose: () => Navigator.of(context).pop(),
+    ),
+  );
 }
