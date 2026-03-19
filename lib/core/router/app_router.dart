@@ -6,10 +6,11 @@ import 'package:aif2f/scene/view/interview_scene_page.dart';
 import 'package:aif2f/scene/view/meeting_scene_page.dart';
 import 'package:aif2f/scene/view/presentation_scene_page.dart';
 import 'package:aif2f/user/view/about_page.dart';
-import 'package:aif2f/user/view/profile_page.dart';
-import 'package:aif2f/user/view/settings_page.dart';
 import 'package:aif2f/user/view/login_page.dart';
+import 'package:aif2f/user/view/member_center_page.dart';
+import 'package:aif2f/user/view/profile_page.dart';
 import 'package:aif2f/user/view/recharge_page.dart';
+import 'package:aif2f/user/view/settings_page.dart';
 part 'app_router.gr.dart';
 
 /// 应用路由常量类
@@ -35,6 +36,12 @@ class AppRoutes {
     path: '/scene/educationscene',
   );
 
+  /// InterviewScene页面 (scene 模块)
+  static final interviewScene = AutoRoute(
+    page: InterviewSceneRoute.page,
+    path: '/scene/interviewscene',
+  );
+
   /// MeetingScene页面 (scene 模块)
   static final meetingScene = AutoRoute(
     page: MeetingSceneRoute.page,
@@ -47,19 +54,28 @@ class AppRoutes {
     path: '/scene/presentationscene',
   );
 
-  /// InterviewScene页面 (scene 模块)
-  static final interviewScene = AutoRoute(
-    page: InterviewSceneRoute.page,
-    path: '/scene/interviewscene',
-  );
-
   /// About页面 (user 模块)
   static final about = AutoRoute(page: AboutRoute.page, path: '/user/about');
+
+  /// Login页面 (user 模块)
+  static final login = AutoRoute(page: LoginRoute.page, path: '/user/login');
+
+  /// MemberCenter页面 (user 模块)
+  static final memberCenter = AutoRoute(
+    page: MemberCenterRoute.page,
+    path: '/user/membercenter',
+  );
 
   /// Profile页面 (user 模块)
   static final profile = AutoRoute(
     page: ProfileRoute.page,
     path: '/user/profile',
+  );
+
+  /// Recharge页面 (user 模块)
+  static final recharge = AutoRoute(
+    page: RechargeRoute.page,
+    path: '/user/recharge',
   );
 
   /// Settings页面 (user 模块)
@@ -68,29 +84,21 @@ class AppRoutes {
     path: '/user/settings',
   );
 
-  /// Login页面 (user 模块)
-  static final login = AutoRoute(page: LoginRoute.page, path: '/user/login');
-
-  /// Recharge页面 (user 模块)
-  static final recharge =
-      AutoRoute(page: RechargeRoute.page, path: '/user/recharge');
-
   /// 所有路由的集合
   /// 在 AppRouter 中直接使用此集合来简化配置
   static final List<AutoRoute> all = [
     interpret,
+    activityScene,
+    educationScene,
+    interviewScene,
+    meetingScene,
+    presentationScene,
+    about,
     login,
+    memberCenter,
+    profile,
     recharge,
-    // // ========== 场景页面路由（已临时注释）==========
-    // activityScene,
-    // educationScene,
-    // interviewScene,
-    // meetingScene,
-    // presentationScene,
-    // // ========== 用户页面路由（已临时注释）==========
-    // about,
-    // profile,
-    // settings,
+    settings,
   ];
 }
 

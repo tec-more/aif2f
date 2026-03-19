@@ -12,7 +12,10 @@ import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/toast_service.dart';
 import 'package:aif2f/data/services/qixiang_pay_service.dart';
 import 'package:aif2f/core/widgets/payment_dialog.dart';
+import 'package:aif2f/core/widgets/member_popup.dart';
 import 'package:aif2f/data/utils/auth_helper.dart';
+import 'package:aif2f/user/view/member_center_page.dart';
+import 'package:aif2f/user/view/settings_page.dart';
 
 /// 会员侧边抽屉菜单
 /// 显示会员等级、累计时长和充值入口（基于Fibonacci数列）
@@ -94,20 +97,47 @@ class MemberDrawer extends ConsumerWidget {
                   children: [
                     _buildMenuItem(
                       context,
-                      icon: Icons.person_outline,
-                      title: '个人资料',
+                      icon: Icons.diamond_outlined,
+                      title: '会员中心',
                       onTap: () {
                         Navigator.pop(context);
-                        onProfile?.call();
+                        // 检查用户是否已登录
+                        if (isLoggedIn) {
+                          // 已登录，使用弹出窗口打开会员中心页面
+                          showDialog(
+                            context: context,
+                            builder: (context) => Dialog(
+                              child: SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.9,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: const MemberCenterPage(),
+                              ),
+                            ),
+                          );
+                        } else {
+                          // 未登录，显示登录对话框
+                          checkLogin(context, ref);
+                        }
                       },
                     ),
                     _buildMenuItem(
                       context,
-                      icon: Icons.settings_outlined,
+                      icon: Icons.security,
                       title: '设置',
                       onTap: () {
                         Navigator.pop(context);
-                        onSettings?.call();
+                        // 使用弹出窗口打开设置页面
+                        showDialog(
+                          context: context,
+                          builder: (context) => Dialog(
+                            child: SizedBox(
+                              width: MediaQuery.of(context).size.width * 0.9,
+                              height: MediaQuery.of(context).size.height * 0.9,
+                              child: const SettingsPage(),
+                            ),
+                          ),
+                        );
                       },
                     ),
                     _buildMenuItem(
@@ -116,7 +146,20 @@ class MemberDrawer extends ConsumerWidget {
                       title: '帮助与反馈',
                       onTap: () {
                         Navigator.pop(context);
-                        onHelp?.call();
+                        // 显示帮助提示对话框
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('帮助与反馈'),
+                            content: const Text('如有任何问题或建议，请联系客服。'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('确定'),
+                              ),
+                            ],
+                          ),
+                        );
                       },
                     ),
                     _buildMenuItem(
@@ -125,7 +168,91 @@ class MemberDrawer extends ConsumerWidget {
                       title: '关于',
                       onTap: () {
                         Navigator.pop(context);
-                        onAbout?.call();
+                        // 显示关于对话框
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('关于 AI 传译'),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'AI 传译',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    '版本：v1.0.0',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  const Text(
+                                    '应用介绍',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'AI 传译是一款智能翻译应用，提供高质量的语音和文本翻译服务。',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    '主要功能',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildFeatureItem('智能翻译', '基于先进 AI 技术的精准翻译'),
+                                  _buildFeatureItem('语音合成', '自然流畅的语音输出'),
+                                  _buildFeatureItem('多语言支持', '支持全球多种主流语言'),
+                                  _buildFeatureItem('离线翻译', '无网络环境也能使用'),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    '技术支持',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    '如有任何问题或建议，请联系我们的客服团队。',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Center(
+                                    child: Text(
+                                      '© ${DateTime.now().year} All Rights Reserved',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('关闭'),
+                              ),
+                            ],
+                          ),
+                        );
                       },
                     ),
                     isLoggedIn
@@ -158,6 +285,38 @@ class MemberDrawer extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// 构建功能项
+  Widget _buildFeatureItem(String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle, size: 20, color: Colors.green),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  description,
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -123,6 +123,22 @@ class MeetingSceneRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [MemberCenterPage]
+class MemberCenterRoute extends PageRouteInfo<void> {
+  const MemberCenterRoute({List<PageRouteInfo>? children})
+    : super(MemberCenterRoute.name, initialChildren: children);
+
+  static const String name = 'MemberCenterRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const MemberCenterPage();
+    },
+  );
+}
+
+/// generated route for
 /// [PresentationScenePage]
 class PresentationSceneRoute extends PageRouteInfo<void> {
   const PresentationSceneRoute({List<PageRouteInfo>? children})
