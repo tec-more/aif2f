@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/user/widgets/login_dialog.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/providers/membership_provider.dart';
+import 'package:aif2f/core/models/fibonacci_membership.dart';
 
 /// 登录检查辅助函数
 ///
@@ -36,7 +38,23 @@ Future<bool> checkLogin(BuildContext context, WidgetRef ref) async {
       },
     );
 
-    if (kDebugMode) print('📤 [checkLogin] 登录对话框结果: $result');
+    // 如果登录成功，初始化会员信息
+    if (result == true) {
+      if (kDebugMode) print('🎉 [checkLogin] 登录成功，初始化会员信息');
+      final newAuthState = ref.read(authProvider);
+      final user = newAuthState.user;
+      if (user != null) {
+        final membershipInfo = FibonacciMembershipInfo(
+          totalHours: user.totalHours,
+          startDate: user.createdAt,
+        );
+        ref.read(membershipProvider.notifier).state = 
+          ref.read(membershipProvider).copyWith(membershipInfo: membershipInfo);
+        if (kDebugMode) print('✅ [checkLogin] 会员信息初始化完成：$membershipInfo');
+      }
+    }
+
+    if (kDebugMode) print('📤 [checkLogin] 登录对话框结果：$result');
     return result ?? false;
   } catch (e) {
     if (kDebugMode) {
