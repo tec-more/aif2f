@@ -16,6 +16,7 @@ import 'package:aif2f/core/widgets/member_popup.dart';
 import 'package:aif2f/data/utils/auth_helper.dart';
 import 'package:aif2f/user/view/member_center_page.dart';
 import 'package:aif2f/user/view/settings_page.dart';
+import 'package:aif2f/core/utils/app_info_util.dart';
 
 /// 会员侧边抽屉菜单
 /// 显示会员等级、累计时长和充值入口（基于Fibonacci数列）
@@ -174,75 +175,85 @@ class MemberDrawer extends ConsumerWidget {
                           builder: (context) => AlertDialog(
                             title: const Text('关于 AI 传译'),
                             content: SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'AI 传译',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    '版本：v1.0.0',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  const Text(
-                                    '应用介绍',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    'AI 传译是一款智能翻译应用，提供高质量的语音和文本翻译服务。',
-                                    style: TextStyle(fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    '主要功能',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _buildFeatureItem('智能翻译', '基于先进 AI 技术的精准翻译'),
-                                  _buildFeatureItem('语音合成', '自然流畅的语音输出'),
-                                  _buildFeatureItem('多语言支持', '支持全球多种主流语言'),
-                                  _buildFeatureItem('离线翻译', '无网络环境也能使用'),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    '技术支持',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    '如有任何问题或建议，请联系我们的客服团队。',
-                                    style: TextStyle(fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  Center(
-                                    child: Text(
-                                      '© ${DateTime.now().year} All Rights Reserved',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
+                              child: FutureBuilder<String>(
+                                future: AppInfoUtil.getVersion(),
+                                builder: (context, snapshot) {
+                                  final version = snapshot.data ?? 'v1.0.0';
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'AI 传译',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ],
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        '版本：v$version',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      const Text(
+                                        '应用介绍',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'AI 传译是一款智能翻译应用，提供高质量的语音和文本翻译服务。',
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        '主要功能',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildFeatureItem(
+                                        '智能翻译',
+                                        '基于先进 AI 技术的精准翻译',
+                                      ),
+                                      _buildFeatureItem('语音合成', '自然流畅的语音输出'),
+                                      _buildFeatureItem('多语言支持', '支持全球多种主流语言'),
+                                      _buildFeatureItem('离线翻译', '无网络环境也能使用'),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        '技术支持',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        '如有任何问题或建议，请联系我们的客服团队。',
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Center(
+                                        child: Text(
+                                          '© ${DateTime.now().year} All Rights Reserved',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                             actions: [
@@ -905,12 +916,18 @@ class MemberDrawer extends ConsumerWidget {
         children: [
           Divider(color: Theme.of(context).colorScheme.outlineVariant),
           const SizedBox(height: 8),
-          Text(
-            'AI传译 v1.0.0',
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+          FutureBuilder<String>(
+            future: AppInfoUtil.getVersion(),
+            builder: (context, snapshot) {
+              final version = snapshot.data ?? '1.0.0';
+              return Text(
+                'AI 传译 v$version',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 4),
           Text(

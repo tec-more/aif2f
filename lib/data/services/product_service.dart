@@ -19,35 +19,38 @@ class ProductService {
     try {
       // 从 API 获取产品数据
       // 使用 /api/v1/product/list 地址获取产品列表
-      final response = await _apiClient.get<Map<String, dynamic>>('/product/list');
-      
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/product/list',
+      );
+
       final data = response.data;
       if (data == null) return _getDefaultProducts();
-      
+
       // API 返回的数据结构中，产品列表在 data['items'] 中
       final dataMap = data['data'] as Map<String, dynamic>?;
-      final List<dynamic> productsJson = dataMap?['items'] as List<dynamic>? ?? [];
-      
+      final List<dynamic> productsJson =
+          dataMap?['items'] as List<dynamic>? ?? [];
+
       final products = productsJson
           .map((json) => ProductModel.fromJson(json as Map<String, dynamic>))
           .where((product) => product.isActive)
           .toList();
-      
+
       // 按 sort 字段从小到大排序
       products.sort((a, b) {
         // 尝试从不同字段获取排序值
         // 首先尝试 sortOrder 字段
         final aSort = a.sortOrder ?? 0;
         final bSort = b.sortOrder ?? 0;
-        
+
         // 如果 sortOrder 相同，使用 id 字段作为排序依据
         if (aSort == bSort) {
           return a.id.compareTo(b.id);
         }
-        
+
         return aSort.compareTo(bSort);
       });
-      
+
       return products;
     } catch (e) {
       // 如果获取失败，返回默认产品列表
@@ -55,8 +58,6 @@ class ProductService {
       return _getDefaultProducts();
     }
   }
-  
-
 
   /// 创建订单
   /// [productId] 产品ID
@@ -66,14 +67,12 @@ class ProductService {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/orders/create',
-        data: {
-          'product_id': productId,
-          'payment_type': paymentType,
-        },
+        data: {'product_id': productId, 'payment_type': paymentType},
       );
 
       final data = response.data;
-      final orderNo = data?['order_no'] as String? ?? data?['orderNo'] as String? ?? '';
+      final orderNo =
+          data?['order_no'] as String? ?? data?['orderNo'] as String? ?? '';
 
       return orderNo;
     } catch (e) {
@@ -163,17 +162,15 @@ class OrderService {
   Future<List<OrderModel>> getOrders({int page = 1, int pageSize = 20}) async {
     try {
       final response = await _apiClient.get<Map<String, dynamic>>(
-        '/orders',
-        queryParameters: {
-          'page': page,
-          'page_size': pageSize,
-        },
+        '/customer/order/list',
+        queryParameters: {'page': page, 'page_size': pageSize},
       );
 
       final data = response.data;
       if (data == null) return [];
 
-      final List<dynamic> ordersJson = data['orders'] as List<dynamic>? ?? data as List<dynamic>? ?? [];
+      final List<dynamic> ordersJson =
+          data['orders'] as List<dynamic>? ?? data as List<dynamic>? ?? [];
 
       final orders = ordersJson
           .map((json) => OrderModel.fromJson(json as Map<String, dynamic>))
@@ -190,7 +187,7 @@ class OrderService {
   Future<OrderModel> getOrderDetail(String orderNo) async {
     try {
       final response = await _apiClient.get<Map<String, dynamic>>(
-        '/orders/$orderNo',
+        '/customer/order/$orderNo',
       );
 
       final data = response.data;
@@ -209,7 +206,7 @@ class OrderService {
   Future<bool> cancelOrder(String orderNo) async {
     try {
       await _apiClient.post<Map<String, dynamic>>(
-        '/orders/$orderNo/cancel',
+        '/customer/orders/$orderNo/cancel',
       );
       return true;
     } catch (e) {
