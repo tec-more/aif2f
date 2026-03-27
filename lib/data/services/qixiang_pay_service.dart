@@ -69,15 +69,21 @@ class QixiangPayService {
         : QixiangPayConfig.wechatType;
 
     // 使用更简单的notify_url和return_url，避免URL编码问题
-    final notifyUrl = 'http://localhost:9998/api/qixiang-pay/notify';
-    final returnUrl = 'http://localhost:9998/recharge/result';
+    final wechatNotifyUrl = QixiangPayConfig.wechatNotifyUrl;
+    final wechatReturnUrl = QixiangPayConfig.wechatReturnUrl;
+    final alipayNotifyUrl = QixiangPayConfig.alipayNotifyUrl;
+    final alipayReturnUrl = QixiangPayConfig.alipayReturnUrl;
 
     final params = <String, dynamic>{
       'pid': QixiangPayConfig.pid,
       'type': paymentType,
       'out_trade_no': outTradeNo,
-      'notify_url': notifyUrl,
-      'return_url': returnUrl,
+      'notify_url': paymentType == QixiangPayConfig.alipayType
+          ? alipayNotifyUrl
+          : wechatNotifyUrl,
+      'return_url': paymentType == QixiangPayConfig.alipayType
+          ? alipayReturnUrl
+          : wechatReturnUrl,
       'name': name,
       'money': money.toStringAsFixed(2),
       'clientip': clientIp ?? '127.0.0.1',

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
+
 /// 七相支付配置
 class QixiangPayConfig {
   /// API 网关地址
@@ -30,15 +32,21 @@ class QixiangPayConfig {
   );
 
   /// 异步通知地址（需要在后端实现）
-  static String get notifyUrl => '$baseUrl/api/qixiang-pay/notify';
+  static String get wechatNotifyUrl => '$baseUrl/api/v1/pay/wechat/notify';
 
   /// 跳转通知地址
-  static String get returnUrl => '$baseUrl/recharge/result';
+  static String get wechatReturnUrl => '$baseUrl/api/v1/pay/wechat/return';
+
+  /// 异步通知地址（需要在后端实现）
+  static String get alipayNotifyUrl => '$baseUrl/api/v1/pay/alipay/notify';
+
+  /// 跳转通知地址
+  static String get alipayReturnUrl => '$baseUrl/api/v1/pay/alipay/return';
 
   /// 支付基础地址（用于构建回调URL）
   static const String baseUrl = String.fromEnvironment(
     'QIXIANG_BASE_URL',
-    defaultValue: 'http://your-domain.com',
+    defaultValue: 'http://139.199.83.208:19998',
   );
 
   /// 支付方式
