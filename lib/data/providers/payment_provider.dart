@@ -104,11 +104,30 @@ class PaymentNotifier extends Notifier<PaymentState> {
   /// 根据订单信息生成支付信息（七相聚合支付）
   Future<PaymentOrder?> createQixiangPayment(PaymentOrder order) async {
     try {
-      return await _paymentService.createQixiangPayment(order);
-    } catch (e) {
+      if (kDebugMode) {
+        print('🔄 [PaymentProvider] 开始调用七相支付API...');
+        print('📋 [PaymentProvider] 订单ID: ${order.orderId}');
+        print('📋 [PaymentProvider] 支付类型: ${order.type}');
+        print('📋 [PaymentProvider] 订单金额: ${order.amount}');
+      }
+
+      final result = await _paymentService.createQixiangPayment(order);
+
+      if (kDebugMode) {
+        print('✅ [PaymentProvider] 七相支付API调用成功');
+        print('📋 [PaymentProvider] 返回的二维码: ${result.qrCode}');
+      }
+
+      return result;
+    } catch (e, stackTrace) {
       if (kDebugMode) {
         print('❌ [PaymentProvider] 生成支付信息失败: $e');
+        print('❌ [PaymentProvider] 错误类型: ${e.runtimeType}');
+        print('❌ [PaymentProvider] 堆栈跟踪: $stackTrace');
       }
+      state = state.copyWith(
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+      );
       return null;
     }
   }
@@ -120,6 +139,15 @@ class PaymentNotifier extends Notifier<PaymentState> {
         orderId: orderId,
         type: type,
       );
+
+      // 保留原有的二维码信息（查询订单不会返回payurl）
+      final String? preservedQrCode = state.currentOrder?.qrCode;
+
+      if (kDebugMode) {
+        print('🔄 [PaymentProvider] 查询订单状态');
+        print('📋 [PaymentProvider] 订单状态: ${order.status}');
+        print('📋 [PaymentProvider] 保留的二维码: $preservedQrCode');
+      }
 
       // 更新状态
       PaymentProcessStatus newStatus;
@@ -137,7 +165,24 @@ class PaymentNotifier extends Notifier<PaymentState> {
           newStatus = PaymentProcessStatus.waiting;
       }
 
-      state = state.copyWith(status: newStatus, currentOrder: order);
+      // 如果查询结果没有二维码，使用之前保存的
+      final updatedOrder = order.qrCode != null
+          ? order
+          : PaymentOrder(
+              orderId: order.orderId,
+              tradeNo: order.tradeNo,
+              type: order.type,
+              status: order.status,
+              amount: order.amount,
+              subject: order.subject,
+              body: order.body,
+              createdAt: order.createdAt,
+              paidAt: order.paidAt,
+              qrCode: preservedQrCode, // 保留二维码
+              wechatParams: order.wechatParams,
+            );
+
+      state = state.copyWith(status: newStatus, currentOrder: updatedOrder);
     } catch (e) {
       state = state.copyWith(
         errorMessage: e.toString().replaceAll('Exception: ', ''),

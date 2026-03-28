@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:aif2f/data/models/product_model.dart';
 import 'package:aif2f/data/models/order_model.dart';
 import 'package:aif2f/data/services/api_client.dart';
@@ -157,27 +158,74 @@ class OrderService {
   }
 
   /// 获取用户订单列表
+  /// [customerId] 客户ID，必填
   /// [page] 页码，默认1
   /// [pageSize] 每页数量，默认20
-  Future<List<OrderModel>> getOrders({int page = 1, int pageSize = 20}) async {
+  Future<List<OrderModel>> getOrders(int customerId, {int page = 1, int pageSize = 20}) async {
     try {
+      if (kDebugMode) {
+        print('🔄 [OrderService] 开始获取订单列表');
+        print('👤 [OrderService] 客户ID: $customerId');
+        print('📋 [OrderService] 页码: $page, 每页数量: $pageSize');
+      }
+
+      // 使用客户订单接口 /v1/orders/customer/{customer_id}
       final response = await _apiClient.get<Map<String, dynamic>>(
-        '/customer/order/list',
+        '/orders/customer/$customerId',
         queryParameters: {'page': page, 'page_size': pageSize},
       );
 
-      final data = response.data;
-      if (data == null) return [];
+      if (kDebugMode) {
+        print('✅ [OrderService] API响应成功');
+        print('📦 [OrderService] 响应数据: ${response.data}');
+      }
 
-      final List<dynamic> ordersJson =
-          data['orders'] as List<dynamic>? ?? data as List<dynamic>? ?? [];
+      final data = response.data;
+      if (data == null) {
+        if (kDebugMode) {
+          print('⚠️ [OrderService] 响应data为null');
+        }
+        return [];
+      }
+
+      if (kDebugMode) {
+        print('📦 [OrderService] 响应数据: $data');
+      }
+
+      // API返回格式: { code: 0, msg: "...", data: { total: int, items: [...] } }
+      final dataMap = data['data'] as Map<String, dynamic>?;
+      if (dataMap == null) {
+        if (kDebugMode) {
+          print('⚠️ [OrderService] 响应data.data为null');
+        }
+        return [];
+      }
+
+      final List<dynamic> ordersJson = dataMap['items'] as List<dynamic>? ?? [];
+
+      if (kDebugMode) {
+        print('📊 [OrderService] 总订单数: ${dataMap['total']}');
+        print('📋 [OrderService] 当前页订单数量: ${ordersJson.length}');
+      }
 
       final orders = ordersJson
           .map((json) => OrderModel.fromJson(json as Map<String, dynamic>))
           .toList();
 
+      if (kDebugMode) {
+        print('✅ [OrderService] 成功解析 ${orders.length} 个订单');
+        if (orders.isNotEmpty) {
+          print('📋 [OrderService] 第一个订单: ${orders.first.orderNo}');
+        }
+      }
+
       return orders;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        print('❌ [OrderService] 获取订单列表失败');
+        print('❌ [OrderService] 错误: $e');
+        print('❌ [OrderService] 堆栈: $stackTrace');
+      }
       throw Exception('获取订单列表失败: $e');
     }
   }

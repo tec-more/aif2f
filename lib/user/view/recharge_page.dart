@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,6 +41,12 @@ class _RechargePageState extends ConsumerState<RechargePage> {
     PaymentOrder? order;
 
     final paymentNotifier = ref.read(paymentProvider.notifier);
+
+    if (kDebugMode) {
+      print('🔄 [RechargePage] 开始创建订单...');
+    }
+
+    // 步骤1: 创建订单
     order = await paymentNotifier.createPaymentOrder(
       outTradeNo: orderNo,
       amount: _selectedAmount!,
@@ -48,41 +55,107 @@ class _RechargePageState extends ConsumerState<RechargePage> {
       type: type,
     );
 
-    if (!mounted) return;
-
-    if (order != null) {
-      // 显示支付对话框并自动打开支付链接
-      _showPaymentDialog(order, type);
-      await _openPaymentUrl(order, type);
-    } else {
-      // 显示错误信息
-      final errorMsg = ref.read(paymentProvider).errorMessage ?? '创建订单失败';
-      toastService.showError(errorMsg);
+    if (order == null || !mounted) {
+      if (mounted) {
+        if (kDebugMode) {
+          print('❌ [RechargePage] 订单创建失败');
+        }
+        // 显示错误信息
+        final errorMsg = ref.read(paymentProvider).errorMessage ?? '创建订单失败';
+        toastService.showError(errorMsg);
+      }
+      return;
     }
+
+    if (kDebugMode) {
+      print('✅ [RechargePage] 订单创建成功');
+      print('📋 [RechargePage] 订单ID: ${order.orderId}');
+      print('📋 [RechargePage] 初始二维码: ${order.qrCode}');
+    }
+
+    // 步骤2: 生成七相支付信息（获取支付二维码链接）
+    if (kDebugMode) {
+      print('🔄 [RechargePage] 开始生成七相支付信息...');
+    }
+
+    final paymentOrder = await paymentNotifier.createQixiangPayment(order);
+
+    if (paymentOrder == null) {
+      if (kDebugMode) {
+        print('❌ [RechargePage] 生成支付信息失败');
+      }
+      final errorMsg = ref.read(paymentProvider).errorMessage ?? '生成支付信息失败';
+      toastService.showError(errorMsg);
+      return;
+    }
+
+    if (kDebugMode) {
+      print('✅ [RechargePage] 支付信息生成成功');
+      print('📋 [RechargePage] 最终二维码链接: ${paymentOrder.qrCode}');
+      print('📋 [RechargePage] 订单状态: ${paymentOrder.status}');
+    }
+
+    // 显示支付对话框并自动打开支付链接
+    _showPaymentDialog(paymentOrder, type);
+    await _openPaymentUrl(paymentOrder, type);
   }
 
   Future<void> _openPaymentUrl(PaymentOrder order, PaymentType type) async {
+    if (kDebugMode) {
+      print('🔍 [RechargePage] 准备打开支付链接');
+      print('📋 [RechargePage] 支付类型: $type');
+      print('📋 [RechargePage] qrCode值: ${order.qrCode}');
+    }
+
     Uri? uri;
 
     if (type == PaymentType.alipay) {
       // 支付宝：使用 qr_code URL
       if (order.qrCode != null) {
         uri = Uri.parse(order.qrCode!);
+        if (kDebugMode) {
+          print('✅ [RechargePage] 支付宝链接已构建: $uri');
+        }
+      } else {
+        if (kDebugMode) {
+          print('❌ [RechargePage] 支付宝qrCode为null');
+        }
       }
     } else if (type == PaymentType.wechat) {
       // 微信支付：七相支付返回的 payUrl（七相支付）
       if (order.qrCode != null) {
         uri = Uri.parse(order.qrCode!);
+        if (kDebugMode) {
+          print('✅ [RechargePage] 微信支付链接已构建: $uri');
+        }
+      } else {
+        if (kDebugMode) {
+          print('❌ [RechargePage] 微信支付qrCode为null');
+        }
       }
     }
 
     if (uri != null && await canLaunchUrl(uri)) {
+      if (kDebugMode) {
+        print('🚀 [RechargePage] 开始启动支付URL');
+      }
       final launched = await launchUrl(
         uri,
         mode: LaunchMode.externalApplication,
       );
       if (!launched && mounted) {
+        if (kDebugMode) {
+          print('❌ [RechargePage] 启动支付URL失败');
+        }
         toastService.showWarning('无法打开支付页面，请稍后重试');
+      } else {
+        if (kDebugMode) {
+          print('✅ [RechargePage] 支付URL已启动');
+        }
+      }
+    } else {
+      if (kDebugMode) {
+        print('❌ [RechargePage] 无法启动支付URL，uri为null或无法启动');
       }
     }
   }

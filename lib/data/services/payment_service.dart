@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/api_client.dart';
+import 'package:aif2f/core/config/api_config.dart';
 
 /// 支付服务（统一使用七相聚合支付后端API）
 class PaymentService {
@@ -41,7 +42,7 @@ class PaymentService {
       };
 
       final response = await _apiClient.post(
-        '/orders/create',
+        ApiConfig.ordersCreateEndpoint,
         data: requestData,
       );
 
@@ -79,34 +80,79 @@ class PaymentService {
 
       if (kDebugMode) {
         print('📤 [PaymentService] 七相支付请求数据: $requestData');
+        print('📋 [PaymentService] 订单ID: ${order.orderId}');
+        print('📋 [PaymentService] 支付类型: $paymentType');
+        print('📋 [PaymentService] 支付金额: ${order.amount}');
       }
 
       final response = await _apiClient.post(
-        '/qixiang/create',
+        ApiConfig.qixiangCreateEndpoint,
         data: requestData,
       );
+
+      if (kDebugMode) {
+        print('📥 [PaymentService] 原始响应: ${response.data}');
+      }
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
         (json) => json as Map<String, dynamic>,
       );
 
+      if (kDebugMode) {
+        print('📥 [PaymentService] API响应解析:');
+        print('   - code: ${apiResponse.code}');
+        print('   - msg: ${apiResponse.msg}');
+        print('   - success: ${apiResponse.success}');
+        print('   - data: ${apiResponse.data}');
+      }
+
       if (!apiResponse.success && apiResponse.code != 0) {
-        throw Exception(apiResponse.msg ?? '生成支付信息失败');
+        final errorMsg = apiResponse.msg ?? '生成支付信息失败';
+        if (kDebugMode) {
+          print('❌ [PaymentService] API返回错误: $errorMsg');
+        }
+        throw Exception(errorMsg);
+      }
+
+      if (apiResponse.data == null) {
+        if (kDebugMode) {
+          print('❌ [PaymentService] 响应data为null');
+        }
+        throw Exception('支付信息响应格式错误：data为null');
       }
 
       if (kDebugMode) {
-        print('📥 [PaymentService] 七相支付响应数据: ${apiResponse.data}');
+        print('📥 [PaymentService] 开始解析PaymentOrder...');
+        print('📋 [PaymentService] 响应data的所有键: ${apiResponse.data!.keys.toList()}');
+        print('📋 [PaymentService] qr_code字段: ${apiResponse.data!['qr_code']}');
+        print('📋 [PaymentService] pay_url字段: ${apiResponse.data!['pay_url']}');
+        print('📋 [PaymentService] code_url字段: ${apiResponse.data!['code_url']}');
       }
 
       // 后端返回的数据包含二维码链接
-      if (apiResponse.data != null) {
-        return PaymentOrder.fromJson(apiResponse.data!, order.type);
+      final paymentOrder = PaymentOrder.fromJson(apiResponse.data!, order.type);
+
+      if (kDebugMode) {
+        print('✅ [PaymentService] PaymentOrder解析成功');
+        print('📋 [PaymentService] 解析后的qrCode: ${paymentOrder.qrCode}');
       }
 
-      throw Exception('支付信息响应格式错误');
+      return paymentOrder;
     } on DioException catch (e) {
+      if (kDebugMode) {
+        print('❌ [PaymentService] DioException: ${e.type}');
+        print('❌ [PaymentService] 错误信息: ${e.message}');
+        print('❌ [PaymentService] 响应状态: ${e.response?.statusCode}');
+        print('❌ [PaymentService] 响应数据: ${e.response?.data}');
+      }
       throw _handleDioError(e);
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        print('❌ [PaymentService] 未知异常: $e');
+        print('❌ [PaymentService] 堆栈跟踪: $stackTrace');
+      }
+      rethrow;
     }
   }
 
@@ -116,7 +162,7 @@ class PaymentService {
     required PaymentType type,
   }) async {
     try {
-      final response = await _apiClient.get('/orders/$orderId');
+      final response = await _apiClient.get(ApiConfig.ordersQueryEndpoint(orderId));
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,
@@ -157,7 +203,7 @@ class PaymentService {
   Future<Map<String, dynamic>> refundAlipay(RefundRequest request) async {
     try {
       final response = await _apiClient.post(
-        '/orders/refund',
+        ApiConfig.ordersRefundEndpoint,
         data: request.toJson(),
       );
 
@@ -196,7 +242,7 @@ class PaymentService {
   Future<Map<String, dynamic>> refundWechat(RefundRequest request) async {
     try {
       final response = await _apiClient.post(
-        '/orders/refund',
+        ApiConfig.ordersRefundEndpoint,
         data: request.toJson(),
       );
 

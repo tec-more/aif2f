@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// 支付类型枚举
 enum PaymentType {
   alipay('支付宝'),
@@ -71,12 +73,37 @@ class PaymentOrder {
   });
 
   factory PaymentOrder.fromJson(Map<String, dynamic> json, PaymentType type) {
+    // 尝试从多个可能的字段名中获取二维码链接
+    final String? qrCode = json['qr_code'] as String? ??
+        json['pay_url'] as String? ??
+        json['code_url'] as String? ??
+        json['qr_url'] as String? ??
+        json['qrcode'] as String? ??
+        json['payurl'] as String?; // 七相支付返回的payurl字段
+
+    if (kDebugMode) {
+      print('🔍 [PaymentOrder.fromJson] 解析二维码链接:');
+      print('   - qr_code: ${json['qr_code']}');
+      print('   - pay_url: ${json['pay_url']}');
+      print('   - payurl: ${json['payurl']}'); // 七相支付字段
+      print('   - code_url: ${json['code_url']}');
+      print('   - qr_url: ${json['qr_url']}');
+      print('   - qrcode: ${json['qrcode']}');
+      print('   ✅ 最终使用: $qrCode');
+    }
+
+    if (kDebugMode) {
+      print('🔍 [PaymentOrder.fromJson] 解析订单ID:');
+      print('   - order_id: ${json['order_id']} (${json['order_id']?.runtimeType})');
+      print('   - order_no: ${json['order_no']}');
+      print('   - out_trade_no: ${json['out_trade_no']}');
+    }
+
     return PaymentOrder(
-      orderId: (json['order_id'] is String 
-          ? json['order_id'] as String
-          : (json['order_id']?.toString() ?? 
-              json['order_no'] as String? ?? 
-              json['out_trade_no'] as String? ?? '')),
+      // 优先使用 order_no（订单号），其次才使用 order_id（数据库ID）
+      orderId: json['order_no'] as String? ??
+          json['out_trade_no'] as String? ??
+          (json['order_id']?.toString() ?? ''),
       tradeNo: json['trade_no'] as String? ?? json['transaction_id'] as String?,
       type: type,
       status: PaymentStatus.fromString(
@@ -94,7 +121,7 @@ class PaymentOrder {
       paidAt: json['paid_at'] != null
           ? DateTime.parse(json['paid_at'])
           : (json['gmt_payment'] != null ? DateTime.parse(json['gmt_payment']) : null),
-      qrCode: json['qr_code'] as String?,
+      qrCode: qrCode,
       wechatParams: json['prepay_id'] != null
           ? WeChatPayParams.fromJson(json)
           : null,

@@ -22,6 +22,8 @@ class ApiConfig {
   static const String authPath = '/auth';
   static const String usersPath = '/users';
   static const String customerPath = '/customer';
+  static const String ordersPath = '/orders';
+  static const String qixiangPath = '/qixiang';
   static const String alipayPath = '/pay/alipay';
   static const String wechatPayPath = '/pay/wechat';
 
@@ -64,4 +66,14 @@ class ApiConfig {
       '$apiBaseUrl$wechatPayPath/refunds';
   static String get wechatPayNotifyEndpoint =>
       '$apiBaseUrl$wechatPayPath/notify';
+
+  /// 订单相关端点
+  static String get ordersCreateEndpoint => '$apiBaseUrl$ordersPath/create';
+  static String ordersQueryEndpoint(String orderId) => '$apiBaseUrl$ordersPath/$orderId';
+  static String get ordersRefundEndpoint => '$apiBaseUrl$ordersPath/refund';
+
+  /// 七相聚合支付端点
+  static String get qixiangCreateEndpoint => '$apiBaseUrl$qixiangPath/create';
+  static String get qixiangReturnEndpoint => '$apiBaseUrl$qixiangPath/return';
+  static String get qixiangNotifyEndpoint => '$apiBaseUrl$qixiangPath/notify';
 }

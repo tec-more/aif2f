@@ -8,7 +8,6 @@ import 'package:aif2f/data/providers/membership_provider.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
 import 'package:aif2f/data/providers/product_provider.dart';
 import 'package:aif2f/data/providers/security_settings_provider.dart';
-import 'package:aif2f/user/widgets/orders_dialog.dart';
 
 /// 会员中心页面
 /// 左侧是菜单（用户订单、用户资料），右侧显示内容
@@ -22,6 +21,15 @@ class MemberCenterPage extends ConsumerStatefulWidget {
 
 class _MemberCenterPageState extends ConsumerState<MemberCenterPage> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // 预加载订单数据
+    Future.microtask(() {
+      ref.read(orderProvider.notifier).loadOrders();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -944,7 +952,7 @@ class _MemberCenterPageState extends ConsumerState<MemberCenterPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        order.productName,
+                        '订单号：${order.orderNo}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -952,9 +960,16 @@ class _MemberCenterPageState extends ConsumerState<MemberCenterPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '订单号：${order.orderNo}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        order.productName ?? '订单',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
+                      if (order.productSummary != null && order.productSummary!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          order.productSummary!.join(', '),
+                          style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -985,23 +1000,45 @@ class _MemberCenterPageState extends ConsumerState<MemberCenterPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '充值时长',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${order.hours} 小时',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                // 商品数量（如果有的话）或充值时长
+                if (order.hours != null)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '充值时长',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${order.hours} 小时',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )
+                else if (order.itemCount != null && order.itemCount! > 0)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '商品数量',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${order.itemCount} 件',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  const SizedBox.shrink(),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [

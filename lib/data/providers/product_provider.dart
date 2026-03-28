@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/data/models/product_model.dart';
 import 'package:aif2f/data/models/order_model.dart';
 import 'package:aif2f/data/services/product_service.dart';
+import 'package:aif2f/data/providers/auth_provider.dart';
 
 /// 产品服务 Provider
 final productServiceProvider = Provider<ProductService>((ref) {
@@ -120,17 +122,65 @@ class OrderNotifier extends Notifier<OrderState> {
 
   /// 加载订单列表
   Future<void> loadOrders({int page = 1, int pageSize = 20}) async {
-    state = state.copyWith(isLoading: true);
+    if (kDebugMode) {
+      print('════════════════════════════════════════');
+      print('🔄 [OrderNotifier] 开始加载订单列表');
+      print('📋 [OrderNotifier] 页码: $page, 每页: $pageSize');
+      print('════════════════════════════════════════');
+    }
+
+    // 获取当前登录用户ID
+    final authState = ref.read(authProvider);
+    if (!authState.isAuthenticated || authState.user == null) {
+      if (kDebugMode) {
+        print('❌ [OrderNotifier] 用户未登录');
+      }
+      state = OrderState(
+        orders: [],
+        isLoading: false,
+        errorMessage: '请先登录',
+      );
+      return;
+    }
+
+    final customerId = authState.user!.id;
+
+    if (kDebugMode) {
+      print('👤 [OrderNotifier] 客户ID: $customerId');
+    }
+
+    state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      final orders = await _service.getOrders(page: page, pageSize: pageSize);
+      final orders = await _service.getOrders(customerId, page: page, pageSize: pageSize);
+
+      if (kDebugMode) {
+        print('✅ [OrderNotifier] 订单加载成功');
+        print('📋 [OrderNotifier] 订单数量: ${orders.length}');
+        if (orders.isNotEmpty) {
+          for (var i = 0; i < orders.length; i++) {
+            print('   ${i + 1}. ${orders[i].orderNo} - ${orders[i].status.displayName} - ¥${orders[i].amount}');
+          }
+        }
+      }
+
       state = OrderState(orders: orders, isLoading: false);
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ [OrderNotifier] 订单加载失败');
+        print('❌ [OrderNotifier] 错误: $e');
+      }
       state = OrderState(
         orders: [],
         isLoading: false,
         errorMessage: e.toString().replaceAll('Exception: ', ''),
       );
+    }
+
+    if (kDebugMode) {
+      print('════════════════════════════════════════');
+      print('🏁 [OrderNotifier] 订单加载流程结束');
+      print('════════════════════════════════════════');
     }
   }
 
