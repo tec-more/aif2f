@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/payment_service.dart';
@@ -24,11 +25,7 @@ class PaymentState {
   final PaymentOrder? currentOrder;
   final String? errorMessage;
 
-  PaymentState({
-    required this.status,
-    this.currentOrder,
-    this.errorMessage,
-  });
+  PaymentState({required this.status, this.currentOrder, this.errorMessage});
 
   PaymentState copyWith({
     PaymentProcessStatus? status,
@@ -59,32 +56,43 @@ class PaymentNotifier extends Notifier<PaymentState> {
     required String subject,
     String? body,
     required PaymentType type,
+    String? productId,
+    int? customerId,
+    String? productName,
+    String? productType,
+    double? unitPrice,
   }) async {
     state = state.copyWith(status: PaymentProcessStatus.creating);
 
     try {
-      final request = CreatePaymentOrderRequest(
-        outTradeNo: outTradeNo,
-        totalAmount: amount,
-        subject: subject,
-        body: body,
+      final order = await _paymentService.createPaymentOrder(
         type: type,
+        productId: productId ?? '',
+        quantity: 1,
+        outTradeNo: outTradeNo,
+        customerId: customerId,
+        productName: productName,
+        productType: productType,
+        unitPrice: unitPrice,
+        subject: subject,
       );
-
-      PaymentOrder order;
-      if (type == PaymentType.alipay) {
-        order = await _paymentService.createAlipayOrder(request);
-      } else {
-        order = await _paymentService.createWechatOrder(request);
-      }
 
       state = PaymentState(
         status: PaymentProcessStatus.waiting,
         currentOrder: order,
       );
 
+      if (kDebugMode) {
+        print('✅ [PaymentProvider] 订单创建成功: ${order.orderId}');
+        print('✅ [PaymentProvider] 二维码: ${order.qrCode}');
+      }
+
       return order;
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ [PaymentProvider] 订单创建失败: $e');
+        print('❌ [PaymentProvider] 错误类型: ${e.runtimeType}');
+      }
       state = PaymentState(
         status: PaymentProcessStatus.failed,
         errorMessage: e.toString().replaceAll('Exception: ', ''),
@@ -93,15 +101,25 @@ class PaymentNotifier extends Notifier<PaymentState> {
     }
   }
 
+  /// 根据订单信息生成支付信息（七相聚合支付）
+  Future<PaymentOrder?> createQixiangPayment(PaymentOrder order) async {
+    try {
+      return await _paymentService.createQixiangPayment(order);
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [PaymentProvider] 生成支付信息失败: $e');
+      }
+      return null;
+    }
+  }
+
   /// 查询订单状态
   Future<void> queryOrderStatus(String orderId, PaymentType type) async {
     try {
-      PaymentOrder order;
-      if (type == PaymentType.alipay) {
-        order = await _paymentService.queryAlipayOrder(orderId);
-      } else {
-        order = await _paymentService.queryWechatOrder(orderId);
-      }
+      final order = await _paymentService.queryOrder(
+        orderId: orderId,
+        type: type,
+      );
 
       // 更新状态
       PaymentProcessStatus newStatus;
@@ -119,10 +137,7 @@ class PaymentNotifier extends Notifier<PaymentState> {
           newStatus = PaymentProcessStatus.waiting;
       }
 
-      state = state.copyWith(
-        status: newStatus,
-        currentOrder: order,
-      );
+      state = state.copyWith(status: newStatus, currentOrder: order);
     } catch (e) {
       state = state.copyWith(
         errorMessage: e.toString().replaceAll('Exception: ', ''),
@@ -205,5 +220,6 @@ class PaymentNotifier extends Notifier<PaymentState> {
 }
 
 /// Payment State Provider
-final paymentProvider =
-    NotifierProvider<PaymentNotifier, PaymentState>(PaymentNotifier.new);
+final paymentProvider = NotifierProvider<PaymentNotifier, PaymentState>(
+  PaymentNotifier.new,
+);

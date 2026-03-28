@@ -8,8 +8,8 @@ import 'package:aif2f/data/providers/product_provider.dart';
 import 'package:aif2f/data/models/product_model.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/toast_service.dart';
-import 'package:aif2f/data/services/qixiang_pay_service.dart';
 import 'package:aif2f/core/widgets/payment_dialog.dart';
+import 'package:aif2f/core/widgets/payment_method_dialog.dart';
 
 /// 会员弹出层组件
 /// 显示会员等级、累计时长和充值入口（基于Fibonacci数列）
@@ -74,10 +74,7 @@ class MemberPopup extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
-                  IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: onClose,
-                  ),
+                  IconButton(icon: Icon(Icons.close), onPressed: onClose),
                 ],
               ),
             ),
@@ -506,7 +503,10 @@ class MemberPopup extends ConsumerWidget {
     return InkWell(
       onTap: () {
         // 显示支付方式选择对话框
-        _showPaymentMethodDialog(context, ref, product, currentInfo);
+        showDialog(
+          context: context,
+          builder: (context) => PaymentMethodDialog(product: product),
+        );
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -638,103 +638,6 @@ class MemberPopup extends ConsumerWidget {
     );
   }
 
-  /// 显示支付方式选择对话框
-  void _showPaymentMethodDialog(
-    BuildContext context,
-    WidgetRef ref,
-    ProductModel product,
-    FibonacciMembershipInfo currentInfo,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('选择支付方式'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '购买：${product.name}',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '金额：¥${product.price.toStringAsFixed(2)}',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '获得：${product.totalHours}小时${product.bonusHours != null && product.bonusHours! > 0 ? " (含${product.bonusHours}小时赠送)" : ""}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // 只显示微信支付选项
-            ListTile(
-              leading: Icon(Icons.wechat, color: Color(0xFF07C160)),
-              title: Text('微信支付'),
-              trailing: Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).pop();
-                // 显示微信支付二维码
-                _showWeChatPaymentQRCode(context, product);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('取消'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 显示微信支付二维码
-  void _showWeChatPaymentQRCode(BuildContext context, ProductModel product) {
-    showDialog(
-      context: context,
-      builder: (context) => FutureBuilder<QixiangPayOrder>(
-        future: _createWeChatOrder(product),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('支付订单创建失败: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            final order = snapshot.data!;
-            final String payUrl = order.qrcode ?? order.payUrl ?? '';
-            return PaymentDialog(
-              title: '微信支付',
-              url: payUrl,
-              onClose: () => Navigator.of(context).pop(),
-            );
-          } else {
-            return Center(child: Text('未知错误'));
-          }
-        },
-      ),
-    );
-  }
-
-  /// 创建微信支付订单
-  Future<QixiangPayOrder> _createWeChatOrder(ProductModel product) async {
-    final qixiangPayService = QixiangPayService();
-    final outTradeNo =
-        'order_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(10000)}';
-
-    return await qixiangPayService.createOrder(
-      type: PaymentType.wechat,
-      outTradeNo: outTradeNo,
-      money: product.price,
-      name: product.name,
-    );
-  }
-
   /// 构建菜单项
   Widget _buildMenuItem(
     BuildContext context, {
@@ -779,7 +682,11 @@ class MemberPopup extends ConsumerWidget {
   }
 
   /// 处理退出登录
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref, VoidCallback onClose) async {
+  Future<void> _handleLogout(
+    BuildContext context,
+    WidgetRef ref,
+    VoidCallback onClose,
+  ) async {
     // 显示确认对话框
     final confirmed = await showDialog<bool>(
       context: context,

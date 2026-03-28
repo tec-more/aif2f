@@ -72,7 +72,11 @@ class PaymentOrder {
 
   factory PaymentOrder.fromJson(Map<String, dynamic> json, PaymentType type) {
     return PaymentOrder(
-      orderId: json['order_id'] as String? ?? json['out_trade_no'] as String? ?? '',
+      orderId: (json['order_id'] is String 
+          ? json['order_id'] as String
+          : (json['order_id']?.toString() ?? 
+              json['order_no'] as String? ?? 
+              json['out_trade_no'] as String? ?? '')),
       tradeNo: json['trade_no'] as String? ?? json['transaction_id'] as String?,
       type: type,
       status: PaymentStatus.fromString(
@@ -150,6 +154,8 @@ class CreatePaymentOrderRequest {
   final String subject;
   final String? body;
   final PaymentType type;
+  final String? productId;
+  final int? quantity;
 
   CreatePaymentOrderRequest({
     required this.outTradeNo,
@@ -157,6 +163,8 @@ class CreatePaymentOrderRequest {
     required this.subject,
     this.body,
     required this.type,
+    this.productId,
+    this.quantity,
   });
 
   Map<String, dynamic> toJson() {
@@ -165,6 +173,8 @@ class CreatePaymentOrderRequest {
       'total_amount': totalAmount.toStringAsFixed(2),
       'subject': subject,
       if (body != null) 'body': body,
+      if (productId != null) 'product_id': productId,
+      if (quantity != null) 'quantity': quantity,
     };
   }
 }

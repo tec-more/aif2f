@@ -41,16 +41,19 @@ Future<bool> checkLogin(BuildContext context, WidgetRef ref) async {
     // 如果登录成功，初始化会员信息
     if (result == true) {
       if (kDebugMode) print('🎉 [checkLogin] 登录成功，初始化会员信息');
-      final newAuthState = ref.read(authProvider);
-      final user = newAuthState.user;
-      if (user != null) {
-        final membershipInfo = FibonacciMembershipInfo(
-          totalHours: user.totalHours,
-          startDate: user.createdAt,
-        );
-        ref.read(membershipProvider.notifier).state = 
-          ref.read(membershipProvider).copyWith(membershipInfo: membershipInfo);
-        if (kDebugMode) print('✅ [checkLogin] 会员信息初始化完成：$membershipInfo');
+      // 检查 context 是否仍然 mounted，避免在 widget unmount 后使用 ref
+      if (context.mounted) {
+        final newAuthState = ref.read(authProvider);
+        final user = newAuthState.user;
+        if (user != null) {
+          final membershipInfo = FibonacciMembershipInfo(
+            totalHours: user.totalHours,
+            startDate: user.createdAt,
+          );
+          ref.read(membershipProvider.notifier).state = 
+            ref.read(membershipProvider).copyWith(membershipInfo: membershipInfo);
+          if (kDebugMode) print('✅ [checkLogin] 会员信息初始化完成：$membershipInfo');
+        }
       }
     }
 

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/providers/payment_provider.dart';
-import 'package:aif2f/data/providers/qixiang_pay_provider.dart';
 import 'package:aif2f/data/services/toast_service.dart';
 import 'package:aif2f/core/widgets/auth_required.dart';
 
@@ -18,14 +17,7 @@ class RechargePage extends ConsumerStatefulWidget {
 }
 
 class _RechargePageState extends ConsumerState<RechargePage> {
-  final List<double> _presetAmounts = [
-    9.9,
-    19.9,
-    49.9,
-    99.9,
-    199.9,
-    499.9,
-  ];
+  final List<double> _presetAmounts = [9.9, 19.9, 49.9, 99.9, 199.9, 499.9];
   double? _selectedAmount;
   PaymentType? _selectedPaymentType;
 
@@ -47,26 +39,14 @@ class _RechargePageState extends ConsumerState<RechargePage> {
 
     PaymentOrder? order;
 
-    // 微信支付使用七相支付，支付宝使用原有支付服务
-    if (type == PaymentType.wechat) {
-      final qixiangNotifier = ref.read(qixiangPayProvider.notifier);
-      order = await qixiangNotifier.createPaymentOrder(
-        type: type,
-        outTradeNo: orderNo,
-        money: _selectedAmount!,
-        name: '账户充值',
-        param: '充值金额: ¥${_selectedAmount!.toStringAsFixed(2)}',
-      );
-    } else {
-      final paymentNotifier = ref.read(paymentProvider.notifier);
-      order = await paymentNotifier.createPaymentOrder(
-        outTradeNo: orderNo,
-        amount: _selectedAmount!,
-        subject: '账户充值',
-        body: '充值金额: ¥${_selectedAmount!.toStringAsFixed(2)}',
-        type: type,
-      );
-    }
+    final paymentNotifier = ref.read(paymentProvider.notifier);
+    order = await paymentNotifier.createPaymentOrder(
+      outTradeNo: orderNo,
+      amount: _selectedAmount!,
+      subject: '账户充值',
+      body: '充值金额: ¥${_selectedAmount!.toStringAsFixed(2)}',
+      type: type,
+    );
 
     if (!mounted) return;
 
@@ -76,9 +56,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
       await _openPaymentUrl(order, type);
     } else {
       // 显示错误信息
-      final errorMsg = type == PaymentType.wechat
-          ? ref.read(qixiangPayProvider).errorMessage ?? '创建订单失败'
-          : ref.read(paymentProvider).errorMessage ?? '创建订单失败';
+      final errorMsg = ref.read(paymentProvider).errorMessage ?? '创建订单失败';
       toastService.showError(errorMsg);
     }
   }
@@ -124,12 +102,8 @@ class _RechargePageState extends ConsumerState<RechargePage> {
         },
         onCancel: () {
           Navigator.of(context).pop();
-          // 根据支付类型重置相应的provider
-          if (type == PaymentType.wechat) {
-            ref.read(qixiangPayProvider.notifier).reset();
-          } else {
-            ref.read(paymentProvider.notifier).reset();
-          }
+          // 重置支付状态
+          ref.read(paymentProvider.notifier).reset();
         },
       ),
     );
@@ -145,24 +119,13 @@ class _RechargePageState extends ConsumerState<RechargePage> {
 
     bool success;
 
-    // 根据支付类型调用不同的服务
-    if (type == PaymentType.wechat) {
-      final qixiangNotifier = ref.read(qixiangPayProvider.notifier);
-      success = await qixiangNotifier.pollOrderStatus(
-        orderId,
-        type,
-        maxAttempts: 30,
-        intervalSeconds: 2,
-      );
-    } else {
-      final paymentNotifier = ref.read(paymentProvider.notifier);
-      success = await paymentNotifier.pollOrderStatus(
-        orderId,
-        type,
-        maxAttempts: 30,
-        intervalSeconds: 2,
-      );
-    }
+    final paymentNotifier = ref.read(paymentProvider.notifier);
+    success = await paymentNotifier.pollOrderStatus(
+      orderId,
+      type,
+      maxAttempts: 30,
+      intervalSeconds: 2,
+    );
 
     if (!mounted) return;
 
@@ -184,9 +147,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
       );
     } else {
       // 显示失败信息
-      final errorMsg = type == PaymentType.wechat
-          ? ref.read(qixiangPayProvider).errorMessage ?? '支付失败'
-          : ref.read(paymentProvider).errorMessage ?? '支付失败';
+      final errorMsg = ref.read(paymentProvider).errorMessage ?? '支付失败';
       toastService.showError(errorMsg);
     }
   }
@@ -196,9 +157,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
     // 使用 AuthRequired 组件保护需要登录的页面
     return AuthRequired(
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('账户充值'),
-        ),
+        appBar: AppBar(title: const Text('账户充值')),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -211,10 +170,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '账户余额',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      const Text('账户余额', style: TextStyle(fontSize: 16)),
                       Text(
                         '¥0.00',
                         style: TextStyle(
@@ -232,10 +188,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
               // 选择充值金额
               const Text(
                 '选择充值金额',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
 
@@ -292,10 +245,7 @@ class _RechargePageState extends ConsumerState<RechargePage> {
               // 支付方式
               const Text(
                 '选择支付方式',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
 
@@ -386,10 +336,7 @@ class _PaymentMethodCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -434,10 +381,7 @@ class _PaymentDialog extends StatelessWidget {
         children: [
           Text(
             '订单金额: ¥${order.amount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Text('订单号: ${order.orderId}'),
@@ -459,23 +403,19 @@ class _PaymentDialog extends StatelessWidget {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: onCancel,
-          child: const Text('取消'),
-        ),
+        TextButton(onPressed: onCancel, child: const Text('取消')),
         if (order.qrCode != null)
           ElevatedButton.icon(
             onPressed: onOpenPayment,
             icon: const Icon(Icons.payment, size: 18),
             label: const Text('打开支付'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isAlipay ? const Color(0xFF1677FF) : const Color(0xFF07C160),
+              backgroundColor: isAlipay
+                  ? const Color(0xFF1677FF)
+                  : const Color(0xFF07C160),
             ),
           ),
-        ElevatedButton(
-          onPressed: onConfirm,
-          child: const Text('已完成支付'),
-        ),
+        ElevatedButton(onPressed: onConfirm, child: const Text('已完成支付')),
       ],
     );
   }
@@ -495,13 +435,7 @@ class _PollingDialog extends StatelessWidget {
           const SizedBox(height: 16),
           const Text('正在确认支付...'),
           const SizedBox(height: 8),
-          Text(
-            '请稍候',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text('请稍候', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         ],
       ),
     );
@@ -513,10 +447,7 @@ class _SuccessDialog extends StatelessWidget {
   final double amount;
   final VoidCallback onConfirm;
 
-  const _SuccessDialog({
-    required this.amount,
-    required this.onConfirm,
-  });
+  const _SuccessDialog({required this.amount, required this.onConfirm});
 
   @override
   Widget build(BuildContext context) {
@@ -531,30 +462,18 @@ class _SuccessDialog extends StatelessWidget {
               color: Colors.green[100],
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.check,
-              color: Colors.green,
-              size: 48,
-            ),
+            child: const Icon(Icons.check, color: Colors.green, size: 48),
           ),
           const SizedBox(height: 16),
           const Text(
             '支付成功',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text('充值金额: ¥${amount.toStringAsFixed(2)}'),
         ],
       ),
-      actions: [
-        ElevatedButton(
-          onPressed: onConfirm,
-          child: const Text('确定'),
-        ),
-      ],
+      actions: [ElevatedButton(onPressed: onConfirm, child: const Text('确定'))],
     );
   }
 }
