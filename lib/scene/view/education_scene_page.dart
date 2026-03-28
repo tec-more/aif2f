@@ -19,7 +19,7 @@ class EducationScenePage extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           SceneMenu(selectedScene: SceneType.education),
-          const UserMenu(),
+          UserMenu(),
         ],
       ),
       body: const Center(

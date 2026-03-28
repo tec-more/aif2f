@@ -70,6 +70,7 @@ class ApiConfig {
   /// 订单相关端点
   static String get ordersCreateEndpoint => '$apiBaseUrl$ordersPath/create';
   static String ordersQueryEndpoint(String orderId) => '$apiBaseUrl$ordersPath/$orderId';
+  static String ordersQueryByOrderNoEndpoint(String orderNo) => '$apiBaseUrl$ordersPath/by-order-no/$orderNo';
   static String get ordersRefundEndpoint => '$apiBaseUrl$ordersPath/refund';
 
   /// 七相聚合支付端点

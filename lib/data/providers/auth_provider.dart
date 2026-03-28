@@ -91,6 +91,8 @@ class AuthNotifier extends Notifier<AuthState> {
           if (kDebugMode) {
             print('✅ Auto-login successful for user: ${user.username}');
           }
+          // 自动登录成功后，刷新会员状态
+          ref.read(membershipProvider.notifier).refresh();
         } catch (e) {
           // Token 无效，清除本地数据
           await _tokenStorage.clearAll();
@@ -137,9 +139,19 @@ class AuthNotifier extends Notifier<AuthState> {
           user: response.user,
         );
 
-        // 延迟同步会员信息，避免循环依赖
-        Future.microtask(() {
-          ref.read(membershipProvider.notifier).refresh();
+        // 获取完整用户信息（包含 totalHours 等额外字段）
+        Future.microtask(() async {
+          try {
+            await fetchCurrentUser();
+            // 用户信息更新后，刷新会员状态
+            ref.read(membershipProvider.notifier).refresh();
+          } catch (e) {
+            if (kDebugMode) {
+              print('⚠️ [AuthProvider] 获取完整用户信息失败: $e');
+            }
+            // 即使失败也使用登录返回的用户信息刷新会员状态
+            ref.read(membershipProvider.notifier).refresh();
+          }
         });
 
         return true;
@@ -161,9 +173,19 @@ class AuthNotifier extends Notifier<AuthState> {
           user: response.user,
         );
 
-        // 延迟同步会员信息，避免循环依赖
-        Future.microtask(() {
-          ref.read(membershipProvider.notifier).refresh();
+        // 获取完整用户信息（包含 totalHours 等额外字段）
+        Future.microtask(() async {
+          try {
+            await fetchCurrentUser();
+            // 用户信息更新后，刷新会员状态
+            ref.read(membershipProvider.notifier).refresh();
+          } catch (e) {
+            if (kDebugMode) {
+              print('⚠️ [AuthProvider] 获取完整用户信息失败: $e');
+            }
+            // 即使失败也使用登录返回的用户信息刷新会员状态
+            ref.read(membershipProvider.notifier).refresh();
+          }
         });
 
         return true;
@@ -212,8 +234,20 @@ class AuthNotifier extends Notifier<AuthState> {
         user: response.user,
       );
 
-      // 同步会员信息
-      ref.read(membershipProvider.notifier).refresh();
+      // 获取完整用户信息（包含 totalHours 等额外字段）
+      Future.microtask(() async {
+        try {
+          await fetchCurrentUser();
+          // 用户信息更新后，刷新会员状态
+          ref.read(membershipProvider.notifier).refresh();
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ [AuthProvider] 获取完整用户信息失败: $e');
+          }
+          // 即使失败也使用登录返回的用户信息刷新会员状态
+          ref.read(membershipProvider.notifier).refresh();
+        }
+      });
 
       return true;
     } catch (e) {
@@ -312,8 +346,20 @@ class AuthNotifier extends Notifier<AuthState> {
         print('🎉 [AuthProvider] 注册流程完全成功，准备返回 true');
       }
 
-      // 同步会员信息
-      ref.read(membershipProvider.notifier).refresh();
+      // 获取完整用户信息（包含 totalHours 等额外字段）
+      Future.microtask(() async {
+        try {
+          await fetchCurrentUser();
+          // 用户信息更新后，刷新会员状态
+          ref.read(membershipProvider.notifier).refresh();
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ [AuthProvider] 获取完整用户信息失败: $e');
+          }
+          // 即使失败也使用注册返回的用户信息刷新会员状态
+          ref.read(membershipProvider.notifier).refresh();
+        }
+      });
 
       return true;
     } catch (e) {
@@ -358,12 +404,23 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(status: AuthStatus.loading);
 
     try {
+      if (kDebugMode) {
+        print('🔄 [AuthProvider] 获取完整用户信息...');
+      }
       final user = await _authService.getCurrentUser();
+      if (kDebugMode) {
+        print('✅ [AuthProvider] 用户信息获取成功');
+        print('👤 [AuthProvider] 用户ID: ${user.id}, 用户名: ${user.username}');
+        print('📊 [AuthProvider] 累计时长: ${user.totalHours} 小时');
+      }
       state = AuthState(
         status: AuthStatus.authenticated,
         user: user,
       );
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ [AuthProvider] 获取用户信息失败: $e');
+      }
       state = AuthState(
         status: AuthStatus.unauthenticated,
         errorMessage: e.toString().replaceAll('Exception: ', ''),

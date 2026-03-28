@@ -19,7 +19,7 @@ class PresentationScenePage extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           SceneMenu(selectedScene: SceneType.presentation),
-          const UserMenu(),
+          UserMenu(),
         ],
       ),
       body: const Center(

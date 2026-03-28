@@ -19,7 +19,7 @@ class MeetingScenePage extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           SceneMenu(selectedScene: SceneType.meeting),
-          const UserMenu(),
+          UserMenu(),
         ],
       ),
       body: const Center(

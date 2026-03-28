@@ -156,13 +156,14 @@ class PaymentService {
     }
   }
 
-  /// 查询订单状态（统一接口）
+  /// 查询订单状态（统一接口，使用订单号）
   Future<PaymentOrder> queryOrder({
     required String orderId,
     required PaymentType type,
   }) async {
     try {
-      final response = await _apiClient.get(ApiConfig.ordersQueryEndpoint(orderId));
+      // 使用订单号查询订单详情
+      final response = await _apiClient.get(ApiConfig.ordersQueryByOrderNoEndpoint(orderId));
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,

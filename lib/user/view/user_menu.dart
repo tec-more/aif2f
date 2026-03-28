@@ -1,6 +1,8 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:aif2f/core/models/fibonacci_membership.dart';
 import 'package:aif2f/core/router/app_router.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
 import 'package:aif2f/data/providers/membership_provider.dart';
@@ -8,17 +10,36 @@ import 'package:aif2f/data/providers/product_provider.dart';
 import 'package:aif2f/data/services/toast_service.dart';
 import 'package:aif2f/user/widgets/orders_dialog.dart';
 
-class UserMenu extends ConsumerWidget {
+class UserMenu extends ConsumerStatefulWidget {
   const UserMenu({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UserMenu> createState() => _UserMenuState();
+}
+
+class _UserMenuState extends ConsumerState<UserMenu> {
+  // 添加计数器强制每次状态变化都重建
+  static int _buildCounter = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    _buildCounter++;
+    if (kDebugMode) {
+      print('🏗️ [UserMenu] build 被调用 (第${_buildCounter}次)');
+    }
     final authState = ref.watch(authProvider);
-    final membership = ref.watch(currentMembershipProvider);
+    // 直接监听 membershipProvider 而不是 currentMembershipProvider
+    final membershipState = ref.watch(membershipProvider);
+    final membership = membershipState.membershipInfo ?? FibonacciMembershipInfo.free();
     final user = authState.user;
     final isLoggedIn = authState.isAuthenticated;
 
+    if (kDebugMode) {
+      print('🔄 [UserMenu] build - 用户: ${user?.username}, 会员等级: LV.${membership.level}, 累计时长: ${membership.totalHours}');
+    }
+
     return PopupMenuButton<String>(
+      key: ObjectKey(membership), // 使用 ObjectKey 确保整个 membership 对象变化时重建
       onSelected: (value) {
         switch (value) {
           case 'profile':
@@ -67,6 +88,21 @@ class UserMenu extends ConsumerWidget {
       itemBuilder: (context) {
         final List<PopupMenuEntry<String>> items = [];
 
+        // ⚠️ 关键修复：在 itemBuilder 中实时获取 Provider 数据
+        final currentMembership = ref.read(currentMembershipProvider);
+        final currentAuthState = ref.read(authProvider);
+        final currentUser = currentAuthState.user;
+        final isLoggedIn = currentAuthState.isAuthenticated;
+
+        if (kDebugMode) {
+          print('════════════════════════════════════════');
+          print('🔨 [UserMenu] itemBuilder 构建菜单');
+          print('👤 [UserMenu] 用户: ${currentUser?.username}');
+          print('📊 [UserMenu] 会员等级: LV.${currentMembership.level}');
+          print('📊 [UserMenu] 累计时长: ${currentMembership.totalHours}');
+          print('════════════════════════════════════════');
+        }
+
         // 用户信息和会员等级头部
         items.add(
           PopupMenuItem(
@@ -77,7 +113,7 @@ class UserMenu extends ConsumerWidget {
                 // 用户名
                 Text(
                   isLoggedIn
-                      ? (user?.nickname ?? user?.username ?? '未知用户')
+                      ? (currentUser?.nickname ?? currentUser?.username ?? '未知用户')
                       : '未登录',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
@@ -86,41 +122,55 @@ class UserMenu extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 // 会员等级标签
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: membership.levelColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(membership.levelIcon, color: Colors.white, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        'LV.${membership.level} ${membership.levelTitle}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                Builder(
+                  builder: (context) {
+                    if (kDebugMode) {
+                      print('🎨 [UserMenu] 渲染会员等级: LV.${currentMembership.level} ${currentMembership.levelTitle}');
+                    }
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                    ],
-                  ),
+                      decoration: BoxDecoration(
+                        color: currentMembership.levelColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(currentMembership.levelIcon, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'LV.${currentMembership.level} ${currentMembership.levelTitle}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 4),
                 // 累计时长
-                Text(
-                  '累计时长: ${_formatHours(membership.totalHours)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                Builder(
+                  builder: (context) {
+                    if (kDebugMode) {
+                      print('🎨 [UserMenu] 渲染累计时长: ${currentMembership.totalHours}');
+                    }
+                    return Text(
+                      '累计时长: ${_formatHours(currentMembership.totalHours)}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    );
+                  },
                 ),
-                if (membership.level == 0) ...[
+                if (currentMembership.level == 0) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '再充值 ${membership.hoursToNextLevel} 小时升级到 LV.1',
+                    '再充值 ${currentMembership.hoursToNextLevel} 小时升级到 LV.1',
                     style: TextStyle(fontSize: 11, color: Colors.blue[600]),
                   ),
                 ],
@@ -222,7 +272,13 @@ class UserMenu extends ConsumerWidget {
       child: IconButton(
         icon: Stack(
           children: [
-            const Icon(Icons.person_outline, color: Colors.white),
+            Builder(
+              builder: (context) {
+                // 在图标构建时实时获取最新的会员状态
+                final latestMembership = ref.read(currentMembershipProvider);
+                return const Icon(Icons.person_outline, color: Colors.white);
+              },
+            ),
             // 等级角标
             if (membership.level > 0)
               Positioned(

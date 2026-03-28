@@ -7,6 +7,7 @@ import 'package:aif2f/data/models/product_model.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/providers/payment_provider.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/providers/membership_provider.dart';
 
 /// 支付方式选择对话框
 class PaymentMethodDialog extends ConsumerStatefulWidget {
@@ -305,6 +306,14 @@ class _PaymentQRCodeDialogState extends ConsumerState<_PaymentQRCodeDialog> {
 
       if (mounted) {
         Navigator.of(context).pop();
+
+        // 刷新用户信息和会员状态
+        if (kDebugMode) {
+          print('🔄 [PaymentQRCodeDialog] 刷新用户信息和会员状态');
+        }
+        await ref.read(authProvider.notifier).fetchCurrentUser();
+        ref.read(membershipProvider.notifier).refresh();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('支付成功！'), backgroundColor: Colors.green),
         );

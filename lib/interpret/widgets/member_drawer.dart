@@ -6,6 +6,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:aif2f/core/models/fibonacci_membership.dart';
 import 'package:aif2f/core/router/app_router.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/providers/membership_provider.dart';
 import 'package:aif2f/data/providers/product_provider.dart';
 import 'package:aif2f/data/models/product_model.dart';
 import 'package:aif2f/data/models/payment_model.dart';
@@ -23,16 +24,12 @@ import 'package:aif2f/core/utils/app_info_util.dart';
 class MemberDrawer extends ConsumerWidget {
   const MemberDrawer({
     super.key,
-    this.membershipInfo,
     this.onRecharge,
     this.onProfile,
     this.onSettings,
     this.onHelp,
     this.onAbout,
   });
-
-  /// 会员信息（基于Fibonacci数列）
-  final FibonacciMembershipInfo? membershipInfo;
 
   /// 充值回调
   final VoidCallback? onRecharge;
@@ -54,8 +51,8 @@ class MemberDrawer extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final isLoggedIn = authState.isAuthenticated;
 
-    // 使用提供的会员信息，或使用默认的免费用户
-    final info = membershipInfo ?? FibonacciMembershipInfo.free();
+    // 从 Provider 获取会员信息
+    final info = ref.watch(currentMembershipProvider);
     final level = info.level;
     final levelTitle = info.levelTitle;
     final levelColor = info.levelColor;

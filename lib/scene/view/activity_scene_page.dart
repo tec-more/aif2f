@@ -19,7 +19,7 @@ class ActivityScenePage extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           SceneMenu(selectedScene: SceneType.activity),
-          const UserMenu(),
+          UserMenu(),
         ],
       ),
       body: const Center(

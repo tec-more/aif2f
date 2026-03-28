@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/core/models/fibonacci_membership.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
@@ -53,15 +54,24 @@ class MembershipNotifier extends Notifier<MembershipState> {
   /// 从用户信息初始化会员数据
   void _initFromUser() {
     final user = _authState.user;
+    if (kDebugMode) {
+      print('🔄 [MembershipProvider] _initFromUser - User: ${user?.username}, totalHours: ${user?.totalHours}');
+    }
     if (user != null) {
       final membershipInfo = FibonacciMembershipInfo(
         totalHours: user.totalHours,
         startDate: user.createdAt,
       );
       state = state.copyWith(membershipInfo: membershipInfo);
+      if (kDebugMode) {
+        print('✅ [MembershipProvider] 会员等级: LV.${membershipInfo.level} - ${membershipInfo.levelTitle}');
+      }
     } else {
       // 未登录状态，使用免费用户
       state = state.copyWith(membershipInfo: FibonacciMembershipInfo.free());
+      if (kDebugMode) {
+        print('⚠️ [MembershipProvider] 未登录，使用免费用户信息');
+      }
     }
   }
 
@@ -102,8 +112,34 @@ class MembershipNotifier extends Notifier<MembershipState> {
   }
 
   /// 刷新会员信息（从用户信息重新加载）
-  void refresh() {
+  Future<void> refresh() async {
+    final user = _authState.user;
+    if (kDebugMode) {
+      print('════════════════════════════════════════');
+      print('🔄 [MembershipProvider] 开始刷新会员信息');
+      print('👤 [MembershipProvider] 用户ID: ${user?.id}, 用户名: ${user?.username}');
+      print('📊 [MembershipProvider] 用户totalHours: ${user?.totalHours}');
+      print('════════════════════════════════════════');
+    }
+
+    if (user == null) {
+      state = state.copyWith(membershipInfo: FibonacciMembershipInfo.free());
+      if (kDebugMode) {
+        print('⚠️ [MembershipProvider] 用户为null，使用免费用户信息');
+      }
+      return;
+    }
+
+    // 直接使用用户信息中的 totalHours（已经从 membership.total_hours 解析）
     _initFromUser();
+
+    if (kDebugMode) {
+      final membershipInfo = state.membershipInfo ?? FibonacciMembershipInfo.free();
+      print('✅ [MembershipProvider] 会员信息刷新完成');
+      print('📊 [MembershipProvider] 累计时长: ${membershipInfo.totalHours} 小时');
+      print('📊 [MembershipProvider] 会员等级: LV.${membershipInfo.level} - ${membershipInfo.levelTitle}');
+      print('════════════════════════════════════════');
+    }
   }
 }
 
@@ -113,7 +149,11 @@ final membershipProvider = NotifierProvider<MembershipNotifier, MembershipState>
 /// 便捷访问：当前会员信息
 final currentMembershipProvider = Provider<FibonacciMembershipInfo>((ref) {
   final state = ref.watch(membershipProvider);
-  return state.membershipInfo ?? FibonacciMembershipInfo.free();
+  final info = state.membershipInfo ?? FibonacciMembershipInfo.free();
+  if (kDebugMode) {
+    print('🔄 [currentMembershipProvider] Provider 被访问，返回: LV.${info.level}, ${info.totalHours}小时');
+  }
+  return info;
 });
 
 /// 便捷访问：是否为免费用户（LV.0）

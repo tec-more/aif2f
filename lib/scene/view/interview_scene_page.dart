@@ -19,7 +19,7 @@ class InterviewScenePage extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           SceneMenu(selectedScene: SceneType.interview),
-          const UserMenu(),
+          UserMenu(),
         ],
       ),
       body: const Center(

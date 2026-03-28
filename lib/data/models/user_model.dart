@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// 用户模型
 class UserModel {
   final int id;
@@ -28,6 +30,21 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    // 优先从 membership 对象中获取 total_hours
+    int totalHoursValue = 0;
+    if (json['membership'] != null && json['membership'] is Map) {
+      final membership = json['membership'] as Map<String, dynamic>;
+      totalHoursValue = (membership['total_hours'] as num?)?.toInt() ?? 0;
+      if (kDebugMode) {
+        print('✅ [UserModel] 从 membership.total_hours 获取: $totalHoursValue');
+      }
+    } else {
+      totalHoursValue = json['total_hours'] as int? ?? json['totalHours'] as int? ?? 0;
+      if (kDebugMode && totalHoursValue > 0) {
+        print('✅ [UserModel] 从 total_hours 字段获取: $totalHoursValue');
+      }
+    }
+
     return UserModel(
       id: json['id'] as int,
       username: json['username'] as String,
@@ -43,7 +60,7 @@ class UserModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null),
-      totalHours: json['total_hours'] as int? ?? json['totalHours'] as int? ?? 0,
+      totalHours: totalHoursValue,
     );
   }
 
