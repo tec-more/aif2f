@@ -40,6 +40,14 @@ class _MemberCenterPageState extends ConsumerState<MemberCenterPage> {
           centerTitle: true,
           backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
+          automaticallyImplyLeading: false,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(),
+              tooltip: '关闭',
+            ),
+          ],
         ),
         body: Row(
           children: [
