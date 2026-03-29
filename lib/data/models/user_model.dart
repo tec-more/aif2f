@@ -14,6 +14,8 @@ class UserModel {
   final DateTime? updatedAt;
   /// 累计充值时长（小时）
   final int totalHours;
+  /// 会员类型：free（免费）、vip（VIP会员）、svip（SVIP会员）
+  final String? membershipType;
 
   UserModel({
     required this.id,
@@ -27,21 +29,42 @@ class UserModel {
     this.createdAt,
     this.updatedAt,
     this.totalHours = 0,
+    this.membershipType = 'free',
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    // 优先从 membership 对象中获取 total_hours
+    // 优先从 membership 对象中获取 total_hours 和 membership_type
     int totalHoursValue = 0;
+    String membershipTypeValue = 'free';
+
     if (json['membership'] != null && json['membership'] is Map) {
       final membership = json['membership'] as Map<String, dynamic>;
       totalHoursValue = (membership['total_hours'] as num?)?.toInt() ?? 0;
+
+      // 根据后端的 is_vip 和 is_svip 字段判断会员类型
+      final isSvip = membership['is_svip'] as bool? ?? false;
+      final isVip = membership['is_vip'] as bool? ?? false;
+
+      if (isSvip) {
+        membershipTypeValue = 'svip';
+      } else if (isVip) {
+        membershipTypeValue = 'vip';
+      } else {
+        // 如果没有 is_vip/is_svip 字段，尝试从 type 字段获取
+        membershipTypeValue = membership['type'] as String? ??
+                            membership['membership_type'] as String? ??
+                            json['membership_type'] as String? ??
+                            'free';
+      }
+
       if (kDebugMode) {
-        print('✅ [UserModel] 从 membership.total_hours 获取: $totalHoursValue');
+        print('✅ [UserModel] 从 membership 获取: total_hours=$totalHoursValue, is_vip=$isVip, is_svip=$isSvip, type=$membershipTypeValue');
       }
     } else {
       totalHoursValue = json['total_hours'] as int? ?? json['totalHours'] as int? ?? 0;
+      membershipTypeValue = json['membership_type'] as String? ?? 'free';
       if (kDebugMode && totalHoursValue > 0) {
-        print('✅ [UserModel] 从 total_hours 字段获取: $totalHoursValue');
+        print('✅ [UserModel] 从字段获取: total_hours=$totalHoursValue, type=$membershipTypeValue');
       }
     }
 
@@ -61,6 +84,7 @@ class UserModel {
           ? DateTime.parse(json['updated_at'])
           : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null),
       totalHours: totalHoursValue,
+      membershipType: membershipTypeValue,
     );
   }
 
@@ -77,6 +101,7 @@ class UserModel {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'total_hours': totalHours,
+      'membership_type': membershipType,
     };
   }
 
@@ -92,6 +117,7 @@ class UserModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     int? totalHours,
+    String? membershipType,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -105,6 +131,7 @@ class UserModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       totalHours: totalHours ?? this.totalHours,
+      membershipType: membershipType ?? this.membershipType,
     );
   }
 }

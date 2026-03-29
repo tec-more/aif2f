@@ -312,7 +312,14 @@ class _PaymentQRCodeDialogState extends ConsumerState<_PaymentQRCodeDialog> {
           print('🔄 [PaymentQRCodeDialog] 刷新用户信息和会员状态');
         }
         await ref.read(authProvider.notifier).fetchCurrentUser();
-        ref.read(membershipProvider.notifier).refresh();
+        await ref.read(membershipProvider.notifier).refresh();
+
+        // 延迟1秒后再次刷新，确保后端数据已更新
+        await Future.delayed(const Duration(seconds: 1));
+        if (kDebugMode) {
+          print('🔄 [PaymentQRCodeDialog] 第二次刷新用户信息');
+        }
+        await ref.read(authProvider.notifier).fetchCurrentUser();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('支付成功！'), backgroundColor: Colors.green),

@@ -11,6 +11,7 @@ class ProductModel {
   final String? discount; // 优惠描述，如"限时9折"
   final bool isActive;
   final int? sortOrder; // 排序字段
+  final String? productType; // 产品类型：recharge（充值套餐）、vip（会员套餐）等
 
   ProductModel({
     required this.id,
@@ -23,6 +24,7 @@ class ProductModel {
     this.discount,
     required this.isActive,
     this.sortOrder,
+    this.productType,
   });
 
   /// 计算折扣百分比
@@ -49,6 +51,7 @@ class ProductModel {
       discount: json['discount'] as String? ?? json['discount_description'] as String?,
       isActive: json['is_active'] as bool? ?? json['isActive'] as bool? ?? true,
       sortOrder: json['sort'] as int? ?? json['sort_order'] as int? ?? json['sortOrder'] as int?,
+      productType: json['product_type'] as String? ?? json['productType'] as String? ?? 'recharge',
     );
   }
 

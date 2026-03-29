@@ -412,6 +412,7 @@ class AuthNotifier extends Notifier<AuthState> {
         print('✅ [AuthProvider] 用户信息获取成功');
         print('👤 [AuthProvider] 用户ID: ${user.id}, 用户名: ${user.username}');
         print('📊 [AuthProvider] 累计时长: ${user.totalHours} 小时');
+        print('💎 [AuthProvider] 会员类型: ${user.membershipType}');
       }
       state = AuthState(
         status: AuthStatus.authenticated,

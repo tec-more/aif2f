@@ -32,10 +32,25 @@ class ProductService {
       final List<dynamic> productsJson =
           dataMap?['items'] as List<dynamic>? ?? [];
 
-      final products = productsJson
+      final allProducts = productsJson
           .map((json) => ProductModel.fromJson(json as Map<String, dynamic>))
-          .where((product) => product.isActive)
           .toList();
+
+      if (kDebugMode) {
+        print('📦 [ProductService] API返回产品数量: ${allProducts.length}');
+        for (var product in allProducts) {
+          print('   - ${product.name} (type: ${product.productType}, active: ${product.isActive})');
+        }
+      }
+
+      // 只显示充值套餐类型的产品（product_type == "hours"）
+      final products = allProducts
+          .where((product) => product.isActive && product.productType == 'hours')
+          .toList();
+
+      if (kDebugMode) {
+        print('✅ [ProductService] 充值套餐数量: ${products.length}');
+      }
 
       // 按 sort 字段从小到大排序
       products.sort((a, b) {
@@ -56,6 +71,45 @@ class ProductService {
     } catch (e) {
       // 如果获取失败，返回默认产品列表
       print('获取产品列表失败: $e');
+      return _getDefaultProducts();
+    }
+  }
+
+  /// 获取所有产品（不过滤类型）
+  /// 用于获取充值套餐和会员套餐的所有产品
+  Future<List<ProductModel>> getAllProducts() async {
+    try {
+      // 从 API 获取产品数据
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/product/list',
+      );
+
+      final data = response.data;
+      if (data == null) return _getDefaultProducts();
+
+      // API 返回的数据结构中，产品列表在 data['items'] 中
+      final dataMap = data['data'] as Map<String, dynamic>?;
+      final List<dynamic> productsJson =
+          dataMap?['items'] as List<dynamic>? ?? [];
+
+      final allProducts = productsJson
+          .map((json) => ProductModel.fromJson(json as Map<String, dynamic>))
+          .where((product) => product.isActive)
+          .toList();
+
+      // 按 sort 字段从小到大排序
+      allProducts.sort((a, b) {
+        final aSort = a.sortOrder ?? 0;
+        final bSort = b.sortOrder ?? 0;
+        if (aSort == bSort) {
+          return a.id.compareTo(b.id);
+        }
+        return aSort.compareTo(bSort);
+      });
+
+      return allProducts;
+    } catch (e) {
+      print('获取所有产品失败: $e');
       return _getDefaultProducts();
     }
   }

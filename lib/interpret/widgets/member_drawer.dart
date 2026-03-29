@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:auto_route/auto_route.dart';
@@ -11,6 +12,7 @@ import 'package:aif2f/data/providers/product_provider.dart';
 import 'package:aif2f/data/models/product_model.dart';
 import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/services/toast_service.dart';
+import 'package:aif2f/data/services/product_service.dart';
 import 'package:aif2f/core/widgets/payment_dialog.dart';
 import 'package:aif2f/core/widgets/payment_method_dialog.dart';
 import 'package:aif2f/core/widgets/member_popup.dart';
@@ -61,6 +63,19 @@ class MemberDrawer extends ConsumerWidget {
     final hoursToNext = info.hoursToNextLevel;
     final progress = info.progress;
 
+    // 从用户模型获取会员类型
+    final user = authState.user;
+    final membershipType = user?.membershipType ?? 'free';
+
+    // 调试输出
+    if (kDebugMode) {
+      print('🔍 [MemberDrawer] 用户会员类型检查');
+      print('👤 用户ID: ${user?.id}');
+      print('📋 membershipType: $membershipType');
+      print('📊 用户总时长: ${user?.totalHours}');
+      print('🎖️ 计算等级: ${info.level}');
+    }
+
     return Drawer(
       child: Container(
         color: Theme.of(context).colorScheme.surface,
@@ -79,6 +94,7 @@ class MemberDrawer extends ConsumerWidget {
                 totalHours,
                 hoursToNext,
                 progress,
+                membershipType,
               ),
 
               const SizedBox(height: 16),
@@ -340,6 +356,7 @@ class MemberDrawer extends ConsumerWidget {
     int totalHours,
     int hoursToNext,
     double progress,
+    String membershipType,
   ) {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -367,7 +384,7 @@ class MemberDrawer extends ConsumerWidget {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
+                  horizontal: 10,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
@@ -381,63 +398,74 @@ class MemberDrawer extends ConsumerWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(levelIcon, color: Colors.white, size: 16),
-                    const SizedBox(width: 6),
+                    Icon(levelIcon, color: Colors.white, size: 14),
+                    const SizedBox(width: 4),
                     Text(
                       'LV.$level',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      levelTitle,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
               const Spacer(),
-              // 累计时长显示
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _formatHours(totalHours),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+              // 累计时长和VIP徽章
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 累计时长显示（可压缩）
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            color: Colors.white,
+                            size: 11,
+                          ),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              _formatHours(totalHours),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 4),
+                  // VIP徽章（不可压缩）
+                  _buildTencentStyleVipBadge(
+                    isVip: membershipType == 'vip',
+                    onVipTap: () {
+                      _showMembershipPurchaseDialog(context, 'VIP会员');
+                    },
+                  ),
+                ],
               ),
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // 进度条
           Column(
@@ -496,77 +524,144 @@ class MemberDrawer extends ConsumerWidget {
               ),
             ],
           ),
-
-          // 详情按钮
-          const SizedBox(height: 16),
-          _buildPrivilegesList(context, info),
         ],
       ),
     );
   }
 
-  /// 构建特权列表
-  Widget _buildPrivilegesList(
-    BuildContext context,
-    FibonacciMembershipInfo info,
-  ) {
-    final privileges = info.privileges;
-    final displayPrivileges = privileges.take(5).toList();
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+  /// 构建腾讯风格VIP徽章
+  Widget _buildTencentStyleVipBadge({
+    required bool isVip,
+    required VoidCallback onVipTap,
+  }) {
+    return GestureDetector(
+      onTap: onVipTap,
+      child: _buildVipBadge(
+        label: 'VIP',
+        isActive: isVip,
+        icon: Icons.diamond,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '当前特权',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ...displayPrivileges.map(
-            (privilege) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.white.withOpacity(0.8),
-                    size: 12,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      privilege,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.85),
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
+    );
+  }
+
+  /// 构建单个VIP徽章
+  Widget _buildVipBadge({
+    required String label,
+    required bool isActive,
+    required IconData icon,
+  }) {
+    return Container(
+      height: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        gradient: isActive
+            ? const LinearGradient(
+                colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(
+                colors: [
+                  const Color(0xFFFF6B6B),
+                  const Color(0xFFEE5A5A),
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(
+          color: isActive ? Colors.white.withOpacity(0.8) : Colors.white.withOpacity(0.5),
+          width: 1.2,
+        ),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFFFD700).withOpacity(0.4),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: const Color(0xFFFF6B6B).withOpacity(0.3),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (isActive) ...[
+            Icon(
+              icon,
+              color: const Color(0xFFFFD700),
+              size: 8,
+              shadows: const [
+                Shadow(
+                  color: Colors.black45,
+                  offset: Offset(0, 0.5),
+                  blurRadius: 1,
+                ),
+              ],
+            ),
+            const SizedBox(width: 1),
+          ] else ...[
+            Icon(
+              Icons.lock,
+              color: Colors.white,
+              size: 7,
+              shadows: const [
+                Shadow(
+                  color: Colors.black26,
+                  offset: Offset(0, 0.5),
+                  blurRadius: 1,
+                ),
+              ],
+            ),
+            const SizedBox(width: 1),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? const Color(0xFFFFD700) : Colors.white,
+              fontSize: 8,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+              letterSpacing: 0.2,
+              height: 1.0,
+              shadows: isActive
+                  ? const [
+                      Shadow(
+                        color: Colors.black54,
+                        offset: Offset(0, 0.5),
+                        blurRadius: 2,
+                      ),
+                    ]
+                  : const [
+                      Shadow(
+                        color: Colors.black26,
+                        offset: Offset(0, 0.5),
+                        blurRadius: 1,
+                      ),
+                    ],
             ),
           ),
-          if (privileges.length > 5)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '等${privileges.length}项特权...',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
-                  fontSize: 10,
-                ),
-              ),
-            ),
         ],
+      ),
+    );
+  }
+
+  /// 显示会员购买对话框
+  void _showMembershipPurchaseDialog(BuildContext context, String membershipType) {
+    // 判断需要购买哪种会员
+    final isSvip = membershipType == 'SVIP会员';
+
+    showDialog(
+      context: context,
+      builder: (context) => _MembershipPurchaseDialog(
+        membershipType: membershipType,
+        isSvip: isSvip,
       ),
     );
   }
@@ -877,3 +972,324 @@ class MemberDrawer extends ConsumerWidget {
     }
   }
 }
+
+/// 会员购买对话框
+class _MembershipPurchaseDialog extends ConsumerStatefulWidget {
+  const _MembershipPurchaseDialog({
+    required this.membershipType,
+    required this.isSvip,
+  });
+
+  final String membershipType;
+  final bool isSvip;
+
+  @override
+  ConsumerState<_MembershipPurchaseDialog> createState() =>
+      _MembershipPurchaseDialogState();
+}
+
+class _MembershipPurchaseDialogState extends ConsumerState<_MembershipPurchaseDialog> {
+  ProductModel? _selectedProduct;
+  List<ProductModel> _allProducts = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllProducts();
+  }
+
+  Future<void> _loadAllProducts() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 直接从API获取所有产品（不经过productsProvider过滤）
+      final service = ProductService();
+      _allProducts = await service.getAllProducts();
+
+      // 自动选择对应的产品
+      final membershipProducts = _allProducts.where((p) => p.productType == 'item').toList();
+
+      for (final product in membershipProducts) {
+        final isSvipProduct = product.name.toLowerCase().contains('svip');
+        if (widget.isSvip && isSvipProduct) {
+          _selectedProduct = product;
+          break;
+        } else if (!widget.isSvip && product.name.toLowerCase().contains('vip') && !isSvipProduct) {
+          _selectedProduct = product;
+          break;
+        }
+      }
+    } catch (e) {
+      print('❌ [_MembershipPurchaseDialog] 加载产品失败: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.85,
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(40),
+          child: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    // 过滤出会员类型的产品（product_type == "item"）
+    final membershipProducts = _allProducts.where((product) => product.productType == 'item').toList();
+
+    // 根据会员类型进一步过滤
+    final filteredProducts = membershipProducts.where((product) {
+      final isSvipProduct = product.name.toLowerCase().contains('svip');
+      return widget.isSvip ? isSvipProduct : product.name.toLowerCase().contains('vip') && !isSvipProduct;
+    }).toList();
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.85,
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 头部
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: widget.isSvip
+                      ? [const Color(0xFFFFD700), const Color(0xFFFFA500)]
+                      : [const Color(0xFF9C27B0), const Color(0xFF7B1FA2)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.isSvip ? Icons.diamond : Icons.card_membership,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.membershipType,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          widget.isSvip ? '尊享365天会员权益' : '尊享30天会员权益',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+
+            // 产品列表
+            if (filteredProducts.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: Text('暂无可用产品'),
+              )
+            else
+              ...filteredProducts.map((product) => _buildProductCard(context, product)),
+
+            // 底部按钮
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _selectedProduct != null
+                      ? () => _purchaseMembership(context, _selectedProduct!)
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: widget.isSvip
+                        ? const Color(0xFFFFD700)
+                        : const Color(0xFF9C27B0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    _selectedProduct != null
+                        ? '立即购买 ¥${_selectedProduct!.price.toStringAsFixed(2)}'
+                        : '请选择产品',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductCard(BuildContext context, ProductModel product) {
+    final isSelected = _selectedProduct?.id == product.id;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedProduct = product;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (widget.isSvip
+                  ? const Color(0xFFFFD700).withOpacity(0.1)
+                  : const Color(0xFF9C27B0).withOpacity(0.1))
+              : Colors.grey.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? (widget.isSvip
+                    ? const Color(0xFFFFD700)
+                    : const Color(0xFF9C27B0))
+                : Colors.grey.withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              widget.isSvip ? Icons.diamond : Icons.card_membership,
+              color: isSelected
+                  ? (widget.isSvip
+                      ? const Color(0xFFFFD700)
+                      : const Color(0xFF9C27B0))
+                  : Colors.grey,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected
+                          ? (widget.isSvip
+                              ? const Color(0xFFFFD700)
+                              : const Color(0xFF9C27B0))
+                          : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    product.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  if (product.bonusHours != null && product.bonusHours! > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '+${product.bonusHours}小时赠送',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '¥${product.price.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: widget.isSvip
+                        ? const Color(0xFFFFD700)
+                        : const Color(0xFF9C27B0),
+                  ),
+                ),
+                if (product.hasDiscount) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '¥${product.originalPrice.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: widget.isSvip
+                    ? const Color(0xFFFFD700)
+                    : const Color(0xFF9C27B0),
+                size: 24,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _purchaseMembership(BuildContext context, ProductModel product) async {
+    // 显示支付方式选择对话框
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => PaymentMethodDialog(product: product),
+      );
+    }
+  }
+}
+
