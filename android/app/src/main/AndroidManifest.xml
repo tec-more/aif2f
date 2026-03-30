@@ -4,7 +4,7 @@
     <!-- 网络权限，WebView必需 -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="AI面对面"
+        android:label="笑话面对面"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

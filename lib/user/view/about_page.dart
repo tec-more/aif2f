@@ -20,7 +20,7 @@ class AboutPage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'AI面对面 - 智能对话应用',
+              '笑话面对面 - 欢乐陪伴应用',
               style: TextStyle(fontSize: 18),
             ),
             SizedBox(height: 10),
