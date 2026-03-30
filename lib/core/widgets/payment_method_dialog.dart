@@ -8,6 +8,7 @@ import 'package:aif2f/data/models/payment_model.dart';
 import 'package:aif2f/data/providers/payment_provider.dart';
 import 'package:aif2f/data/providers/auth_provider.dart';
 import 'package:aif2f/data/providers/membership_provider.dart';
+import 'package:aif2f/data/services/toast_service.dart';
 
 /// 支付方式选择对话框
 class PaymentMethodDialog extends ConsumerStatefulWidget {
@@ -305,7 +306,12 @@ class _PaymentQRCodeDialogState extends ConsumerState<_PaymentQRCodeDialog> {
       }
 
       if (mounted) {
-        Navigator.of(context).pop();
+        // 使用ToastService显示成功提示（Overlay方式，确保在最顶层）
+        ToastService().showSuccess('支付成功！');
+
+        // 关闭所有对话框（二维码对话框和支付方式选择对话框）
+        Navigator.of(context).pop(); // 关闭二维码对话框
+        Navigator.of(context).pop(); // 关闭支付方式选择对话框
 
         // 刷新用户信息和会员状态
         if (kDebugMode) {
@@ -320,10 +326,6 @@ class _PaymentQRCodeDialogState extends ConsumerState<_PaymentQRCodeDialog> {
           print('🔄 [PaymentQRCodeDialog] 第二次刷新用户信息');
         }
         await ref.read(authProvider.notifier).fetchCurrentUser();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('支付成功！'), backgroundColor: Colors.green),
-        );
       }
     } catch (e) {
       if (kDebugMode) {
@@ -333,12 +335,8 @@ class _PaymentQRCodeDialogState extends ConsumerState<_PaymentQRCodeDialog> {
         setState(() {
           _isCheckingPayment = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('支付尚未完成，请稍后再试'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        // 使用ToastService显示错误提示
+        ToastService().showWarning('支付尚未完成，请稍后再试');
       }
     }
   }
