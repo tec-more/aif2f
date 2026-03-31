@@ -5,10 +5,10 @@ import 'dart:io'; // 导入文件操作相关的包
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/interpret/model/interpret_model.dart';
-import 'package:aif2f/core/services/translation_service.dart';
-import 'package:aif2f/core/services/ai_asr.dart';
-import 'package:aif2f/core/services/volcano_asr.dart';
+import 'package:aif2f/core/services/server_asr_service.dart';
 import 'package:aif2f/core/config/app_config.dart';
+import 'package:aif2f/data/providers/auth_provider.dart';
+import 'package:aif2f/data/services/token_storage_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
 
@@ -164,10 +164,8 @@ final interpretViewModelProvider =
 class InterpretViewModel extends Notifier<InterpretState> {
   // 初始化语音获取服务
   final FlutterF2fSound _flutterF2fSound = FlutterF2fSound();
-  // 科大讯飞实时语音识别服务
-  final XfyunRealtimeAsrService _xfyunAsrService = XfyunRealtimeAsrService();
-  // 火山引擎实时语音识别服务
-  VolcanoRealtimeAsrService? _volcanoAsrService;
+  // 服务器ASR服务（使用豆包同传）
+  final ServerAsrService _serverAsrService = ServerAsrService();
   StreamSubscription<List<int>>? systemSoundCaptureStreamSubscription;
 
   // 音频文件输出流
@@ -211,55 +209,22 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
   @override
   InterpretState build() {
-    // 初始化状态，使用配置的最佳ASR服务
-    final defaultService = AppConfig.bestAsrService;
-    _log('🎯 ASR服务初始化: 使用 $defaultService (配置: ${AppConfig.defaultAsrService})');
-    _log('   火山引擎: ${AppConfig.isVolcanoConfigured ? "已配置" : "未配置"}');
-    _log('   科大讯飞: ${AppConfig.isXfyunConfigured ? "已配置" : "未配置"}');
+    // 初始化状态，使用服务器ASR服务
+    _log('🎯 ASR服务初始化: 使用服务器API（豆包同传）');
 
-    return InterpretState(asrServiceType: defaultService);
+    return InterpretState(asrServiceType: 'server');
   }
 
   /// 获取当前 ASR 服务
-  dynamic _getCurrentAsrService() {
-    if (state.asrServiceType == 'volcano') {
-      // 检查火山引擎是否已配置
-      if (!AppConfig.isVolcanoConfigured) {
-        _log('⚠️ 火山引擎未配置，回退到科大讯飞');
-        state = state.copyWith(asrServiceType: 'xfyun');
-        return _xfyunAsrService;
-      }
-      // 懒加载火山引擎服务
-      _volcanoAsrService ??= VolcanoRealtimeAsrService(
-        appId: AppConfig.volcanoAppId,
-        accessKey: AppConfig.volcanoAccessKey,
-        uri: AppConfig.volcanoUri,
-        wsUrl: AppConfig.volcanoWsUrl,
-      );
-      return _volcanoAsrService;
-    }
-    return _xfyunAsrService;
+  ServerAsrService _getCurrentAsrService() {
+    return _serverAsrService;
   }
 
-  /// 切换 ASR 服务
+  /// 切换 ASR 服务（已废弃，现在只使用服务器API）
   void switchAsrService(String serviceType) {
-    if (serviceType != 'xfyun' && serviceType != 'volcano') {
-      _log('❌ 无效的 ASR 服务类型: $serviceType');
-      return;
-    }
-
-    if (serviceType == 'volcano' && !AppConfig.isVolcanoConfigured) {
-      _log('⚠️ 火山引擎未配置，无法切换');
-      state = state.copyWith(
-        statusMessage: '火山引擎未配置，请检查配置文件',
-      );
-      return;
-    }
-
-    _log('🔄 切换 ASR 服务: ${state.asrServiceType} → $serviceType');
+    _log('⚠️ ASR服务切换已废弃，现在统一使用服务器API（豆包同传）');
     state = state.copyWith(
-      asrServiceType: serviceType,
-      statusMessage: '已切换到${serviceType == "xfyun" ? "科大讯飞" : "火山引擎"}',
+      statusMessage: '统一使用服务器API（豆包同传）',
     );
   }
 
@@ -447,7 +412,27 @@ class InterpretViewModel extends Notifier<InterpretState> {
       // 连接ASR服务（如果启用实时识别）
       if (_enableRealtimeAsr) {
         final asrService = _getCurrentAsrService();
-        final serviceName = state.asrServiceType == 'volcano' ? '火山引擎' : '科大讯飞';
+        final serviceName = '服务器API（豆包同传）';
+
+        // 获取用户认证Token
+        final tokenStorage = TokenStorageService();
+        final token = await tokenStorage.getToken();
+
+        if (token == null || token.isEmpty) {
+          _log('❌ 未找到认证Token，请先登录');
+          state = state.copyWith(statusMessage: '请先登录后再使用语音识别');
+          return;
+        }
+
+        asrService.setAuthToken(token);
+        _log('✅ 已设置认证Token');
+
+        // 设置语言配置
+        asrService.setLanguageConfig(
+          sourceLanguage: state.sourceOneLanguage,
+          targetLanguage: state.targetOneLanguage,
+          type: 1, // 一栏
+        );
 
         // 先设置所有回调
         asrService.onTextSrcRecognized = (text, is_final) {
@@ -509,20 +494,6 @@ class InterpretViewModel extends Notifier<InterpretState> {
           _log('$serviceName ASR已断开');
           _isAsrConnected = false; // 标记为未连接
         };
-
-        // 🔧 设置讯飞API的语言配置（一栏：系统声音）
-        if (asrService is XfyunRealtimeAsrService) {
-          try {
-            (asrService as XfyunRealtimeAsrService).setLanguageConfig(
-              sourceLanguage: state.sourceOneLanguage,
-              targetLanguage: state.targetOneLanguage,
-              type: 1, // 一栏
-            );
-          } catch (e) {
-            _log('⚠️ 设置一栏语言配置失败: $e');
-            // 继续执行，使用默认配置
-          }
-        }
 
         // 等待连接成功
         final connected = await asrService.connect();

@@ -72,10 +72,21 @@ class AuthService {
   /// 客户登录（使用邮箱）
   Future<TokenResponse> customerLogin(CustomerLogin request) async {
     try {
+      if (kDebugMode) {
+        print('🔐 [AuthService] 开始客户登录请求');
+        print('📧 邮箱: ${request.email}');
+        print('🔑 密码: ${request.password.isNotEmpty ? "***" : ""}');
+      }
+
       final response = await _apiClient.post(
         '/customer/auth/login',
         data: request.toJson(),
       );
+
+      if (kDebugMode) {
+        print('✅ [AuthService] 登录响应状态码: ${response.statusCode}');
+        print('📦 [AuthService] 响应数据: ${response.data}');
+      }
 
       final apiResponse = ApiResponse<Map<String, dynamic>>.fromJson(
         response.data,

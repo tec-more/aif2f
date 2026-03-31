@@ -38,8 +38,6 @@ dependencies:
   provider: ^6.1.2
   auto_route: ^10.3.0
 
-  web_socket_channel: ^3.0.1  # 与智谱进行 WebSocket 通讯
-
   # 音频处理 - 注意：flutter_sound 不支持 Windows
   # Windows 构建时已注释 flutter_sound
   # flutter_sound: ^9.30.0

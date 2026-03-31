@@ -7,7 +7,7 @@ class ApiConfig {
   );
 
   /// API 版本
-  static const String apiVersion = '/api/v1';
+  static const String apiVersion = '/v1';
 
   /// 完整的 API 基础路径
   static String get apiBaseUrl => '$baseUrl$apiVersion';

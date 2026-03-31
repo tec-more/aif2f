@@ -117,9 +117,18 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> login(String emailOrUsername, String password) async {
     state = state.copyWith(status: AuthStatus.loading);
 
+    if (kDebugMode) {
+      print('🔐 [AuthProvider] 开始登录流程');
+      print('📧 输入: $emailOrUsername');
+    }
+
     try {
       // 判断输入的是邮箱还是用户名
       final isEmail = emailOrUsername.contains('@');
+
+      if (kDebugMode) {
+        print('✉️ 判断为邮箱登录: $isEmail');
+      }
 
       if (isEmail) {
         // 使用 customer 登录（邮箱）
@@ -191,6 +200,13 @@ class AuthNotifier extends Notifier<AuthState> {
         return true;
       }
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ [AuthProvider] 登录失败');
+        print('📦 错误类型: ${e.runtimeType}');
+        print('💬 错误信息: $e');
+        print('🔍 堆栈跟踪: ${StackTrace.current}');
+      }
+
       // 清理错误信息，移除技术性前缀和符号
       String errorMsg = e.toString();
       errorMsg = errorMsg.replaceAll('Exception: ', '');
