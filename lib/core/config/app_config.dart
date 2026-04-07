@@ -14,6 +14,13 @@ class AppConfig {
     return '$apiBaseUrl/$apiVersion$path';
   }
 
+  /// 获取WebSocket路径（可能需要/api前缀）
+  static String getWebSocketPath(String path) {
+    // WebSocket路径可能需要 /api/v1 而不是 /v1
+    // 根据服务器文档，WebSocket使用 /api/v1
+    return '$apiBaseUrl/api/$apiVersion$path';
+  }
+
   /// 句子分隔符（用于区分识别的不同句子）
   /// 使用特殊字符组合，避免与正常文本冲突
   static const String sentenceSeparator = '|||';

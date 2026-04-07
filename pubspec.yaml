@@ -47,6 +47,9 @@ dependencies:
   http: ^1.2.0
   dio: ^5.4.0
 
+  # WebSocket
+  web_socket_channel: ^2.4.0
+
   # 加密和认证
   crypto: ^3.0.3
 

@@ -6,8 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aif2f/interpret/model/interpret_model.dart';
 import 'package:aif2f/core/services/server_asr_service.dart';
-import 'package:aif2f/core/config/app_config.dart';
-import 'package:aif2f/data/providers/auth_provider.dart';
 import 'package:aif2f/data/services/token_storage_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter_f2f_sound/flutter_f2f_sound.dart';
@@ -44,6 +42,9 @@ class InterpretState {
   final String inputTwoTextOld;
   final String translatedTwoTextOld;
 
+  final String jsonDebug; // 新增：JSON调试信息
+  final bool showJsonDebug; // 新增：是否显示JSON调试信息
+
   final String sourceOneLanguage;
   final String targetOneLanguage;
   final String sourceTwoLanguage;
@@ -78,6 +79,9 @@ class InterpretState {
     this.inputTwoTextOld = '',
     this.translatedTwoTextOld = '',
 
+    this.jsonDebug = '', // 默认为空
+    this.showJsonDebug = false, // 默认不显示
+
     this.sourceOneLanguage = '中文',
     this.targetOneLanguage = '英语',
     this.sourceTwoLanguage = '英语',
@@ -110,6 +114,9 @@ class InterpretState {
     String? inputTwoTextOld,
     String? translatedTwoTextOld,
 
+    String? jsonDebug,
+    bool? showJsonDebug,
+
     String? sourceOneLanguage,
     String? targetOneLanguage,
     String? sourceTwoLanguage,
@@ -140,6 +147,9 @@ class InterpretState {
       translatedOneTextOld: translatedOneTextOld ?? this.translatedOneTextOld,
       inputTwoTextOld: inputTwoTextOld ?? this.inputTwoTextOld,
       translatedTwoTextOld: translatedTwoTextOld ?? this.translatedTwoTextOld,
+
+      jsonDebug: jsonDebug ?? this.jsonDebug,
+      showJsonDebug: showJsonDebug ?? this.showJsonDebug,
 
       sourceOneLanguage: sourceOneLanguage ?? this.sourceOneLanguage,
       targetOneLanguage: targetOneLanguage ?? this.targetOneLanguage,
@@ -436,54 +446,57 @@ class InterpretViewModel extends Notifier<InterpretState> {
 
         // 先设置所有回调
         asrService.onTextSrcRecognized = (text, is_final) {
-          // 只在最终结果时更新（is_final == 1），跳过中间结果
-          _log(
-            ' 📝 更新前 - inputOneText: "${state.inputOneTextOld}" (${state.inputOneText.length} 字符)',
-          );
-          // 追加识别文本到状态（不覆盖已有内容）
-          final currentText = state.inputOneTextOld;
-          // 使用特殊分隔符连接句子，避免切割错误
-          if (is_final == 1) {
-            final separator = currentText.isEmpty ? '' : AppConfig.sentenceSeparator;
-            final newText = '$currentText$separator$text';
-            state = state.copyWith(inputOneTextOld: newText);
-            state = state.copyWith(inputOneText: newText);
-          } else {
-            state = state.copyWith(inputOneText: '$currentText  $text');
-          }
-
-          _log(
-            '   📝 更新后 - inputOneText: "${state.inputOneText}" (${state.inputOneText.length} 字符)',
-          );
-
-          _log('   ✅ State已更新');
+          // 调试日志
+          _log(' 📝 原文识别 - is_final: $is_final, text: "$text"');
         };
+
+        asrService.onTextDstRecognized = (text, is_final) {
+          // 调试日志
+          _log(' 📝 译文识别 - is_final: $is_final, text: "$text"');
+        };
+
+        // 新增：配对翻译回调（格式化的原文+译文）
+        asrService.onPairTranslationReceived = (formattedText) {
+          _log('📝 ========== 配对翻译回调已触发 ==========');
+          _log('📝 格式化文本长度: ${formattedText.length} 字符');
+          _log('📝 格式化文本内容: "$formattedText"');
+          _log('📝 更新前 - inputOneText: "${state.inputOneText}"');
+          _log('📝 更新前 - translatedOneText: "${state.translatedOneText}"');
+
+          // 将格式化的翻译设置为原文和译文区域的内容
+          state = state.copyWith(
+            inputOneText: formattedText,
+            translatedOneText: formattedText,
+            inputOneTextOld: formattedText,
+            translatedOneTextOld: formattedText,
+          );
+
+          _log('📝 更新后 - inputOneText: "${state.inputOneText}"');
+          _log('📝 更新后 - translatedOneText: "${state.translatedOneText}"');
+          _log('✅ 翻译内容已更新到UI');
+          _log('📝 =====================================');
+        };
+
+        // 新增：JSON调试回调（显示原始JSON）
+        asrService.onJsonReceived = (formattedJson) {
+          _log('📋 ========== JSON调试信息 ==========');
+          _log('📋 JSON内容:');
+          _log(formattedJson);
+          _log('📋 ===================================');
+
+          // 更新状态，保存JSON（限制长度避免内存溢出）
+          final maxLength = 5000; // 最多保留5000字符
+          final truncatedJson = formattedJson.length > maxLength
+              ? formattedJson.substring(formattedJson.length - maxLength)
+              : formattedJson;
+
+          state = state.copyWith(jsonDebug: truncatedJson);
+        };
+
         asrService.onError = (error) {
           _log('$serviceName ASR错误: $error');
           state = state.copyWith(statusMessage: 'ASR错误: $error');
           _isAsrConnected = false; // 标记为未连接
-        };
-        asrService.onTextDstRecognized = (text, is_final) {
-          _log('🎉 $serviceName ASR识别结果: "$text"');
-          _log(
-            '   📝 更新前 - inputOneText: "${state.translatedOneText}" (${state.translatedOneText.length} 字符)',
-          );
-          // 追加识别文本到状态（不覆盖已有内容）
-          final currentText = state.translatedOneTextOld;
-          // 使用特殊分隔符连接句子，避免切割错误
-          if (is_final == 1) {
-            final separator = currentText.isEmpty ? '' : AppConfig.sentenceSeparator;
-            final newText = '$currentText$separator$text';
-            state = state.copyWith(translatedOneTextOld: newText);
-            state = state.copyWith(translatedOneText: newText);
-          } else {
-            state = state.copyWith(translatedOneText: '$currentText  $text');
-          }
-
-          _log(
-            '   📝 更新后 - translatedOneText: "${state.translatedOneText}" (${state.translatedOneText.length} 字符)',
-          );
-          _log('   ✅ State已更新');
         };
         asrService.onConnected = () {
           _log('✅ $serviceName ASR已连接');
@@ -1378,5 +1391,18 @@ class InterpretViewModel extends Notifier<InterpretState> {
       return 'ASR 已连接';
     }
     return 'ASR 未连接';
+  }
+
+  /// 切换JSON调试信息显示
+  void toggleJsonDebug() {
+    final newState = !state.showJsonDebug;
+    state = state.copyWith(showJsonDebug: newState);
+    _log('📋 JSON调试信息显示: ${newState ? "开启" : "关闭"}');
+  }
+
+  /// 清空JSON调试信息
+  void clearJsonDebug() {
+    state = state.copyWith(jsonDebug: '');
+    _log('📋 已清空JSON调试信息');
   }
 }
