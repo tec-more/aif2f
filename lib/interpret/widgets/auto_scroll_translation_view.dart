@@ -45,6 +45,7 @@ class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
   bool _isUserScrolling = false;
   int _lastSentenceCount = 0;
   late TextEditingController _textController;
+  DateTime? _lastUpdateTime;
 
   @override
   void initState() {
@@ -60,28 +61,42 @@ class _AutoScrollTranslationViewState extends State<AutoScrollTranslationView> {
   void didUpdateWidget(AutoScrollTranslationView oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 更新文本控制器内容（如果初始文本变化）
-    if (widget.initialText != oldWidget.initialText &&
-        widget.initialText != _textController.text) {
-      _textController.text = widget.initialText ?? '';
-      _textController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _textController.text.length),
-      );
-    }
-
     // 检测是否有新句子
     final currentCount =
         widget.sourceSentences.length + widget.targetSentences.length;
     final hasNewSentences = currentCount > _lastSentenceCount;
     _lastSentenceCount = currentCount;
 
-    // 如果有新句子且用户没有在手动滚动，则自动滚动到底部
-    if (hasNewSentences && !_isUserScrolling && mounted) {
-      // 等待两个帧完成，确保布局完全稳定
+    // 使用 requestAnimationFrame 对齐 60Hz 刷新率渲染翻译内容
+    if (mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients && !_isUserScrolling) {
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        // 添加延迟感，让翻译内容的显示更加平滑
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (mounted) {
+            // 更新文本控制器内容（如果初始文本变化）
+            if (widget.initialText != oldWidget.initialText &&
+                widget.initialText != _textController.text) {
+              _textController.text = widget.initialText ?? '';
+              _textController.selection = TextSelection.fromPosition(
+                TextPosition(offset: _textController.text.length),
+              );
+            }
+
+            // 如果有新句子且用户没有在手动滚动，则自动滚动到底部
+            if (hasNewSentences && !_isUserScrolling && mounted) {
+              // 等待布局完全稳定
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted &&
+                    _scrollController.hasClients &&
+                    !_isUserScrolling) {
+                  // 滚动到底部，并多滚动一点，确保最后一行文字完全显示
+                  final maxExtent = _scrollController.position.maxScrollExtent;
+                  _scrollController.jumpTo(
+                    maxExtent + 20,
+                  ); // 多滚动20像素，确保最后一行完全显示
+                }
+              });
+            }
           }
         });
       });
@@ -239,6 +254,7 @@ class _AutoScrollTranslationViewOptimizedState
   bool _isUserScrolling = false;
   int _lastSentenceCount = 0;
   late TextEditingController _textController;
+  DateTime? _lastUpdateTime;
 
   @override
   void initState() {
@@ -252,27 +268,42 @@ class _AutoScrollTranslationViewOptimizedState
   void didUpdateWidget(AutoScrollTranslationViewOptimized oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 更新文本控制器内容（如果初始文本变化）
-    if (widget.initialText != oldWidget.initialText &&
-        widget.initialText != _textController.text) {
-      _textController.text = widget.initialText ?? '';
-      _textController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _textController.text.length),
-      );
-    }
-
+    // 检测是否有新句子
     final currentCount =
         widget.sourceSentences.length + widget.targetSentences.length;
     final hasNewSentences = currentCount > _lastSentenceCount;
     _lastSentenceCount = currentCount;
 
-    // 如果有新句子且用户没有在手动滚动，则自动滚动到底部
-    if (hasNewSentences && !_isUserScrolling && mounted) {
-      // 等待两个帧完成，确保布局完全稳定
+    // 使用 requestAnimationFrame 对齐 60Hz 刷新率渲染翻译内容
+    if (mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients && !_isUserScrolling) {
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        // 添加延迟感，让翻译内容的显示更加平滑
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (mounted) {
+            // 更新文本控制器内容（如果初始文本变化）
+            if (widget.initialText != oldWidget.initialText &&
+                widget.initialText != _textController.text) {
+              _textController.text = widget.initialText ?? '';
+              _textController.selection = TextSelection.fromPosition(
+                TextPosition(offset: _textController.text.length),
+              );
+            }
+
+            // 如果有新句子且用户没有在手动滚动，则自动滚动到底部
+            if (hasNewSentences && !_isUserScrolling && mounted) {
+              // 等待布局完全稳定
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted &&
+                    _scrollController.hasClients &&
+                    !_isUserScrolling) {
+                  // 滚动到底部，并多滚动一点，确保最后一行文字完全显示
+                  final maxExtent = _scrollController.position.maxScrollExtent;
+                  _scrollController.jumpTo(
+                    maxExtent + 20,
+                  ); // 多滚动20像素，确保最后一行完全显示
+                }
+              });
+            }
           }
         });
       });

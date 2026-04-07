@@ -24,8 +24,8 @@ class InterpretState {
   final bool isProcessing;
   final bool isConnected;
   final bool isSystemSoundEnabled;
-  final bool isOneTtsEnabled;  // 一栏 TTS 播报状态
-  final bool isTwoTtsEnabled;  // 二栏 TTS 播报状态
+  final bool isOneTtsEnabled; // 一栏 TTS 播报状态
+  final bool isTwoTtsEnabled; // 二栏 TTS 播报状态
   final double onefontSize;
   final double twofontSize;
   final int panelNumber;
@@ -59,8 +59,8 @@ class InterpretState {
     this.isProcessing = false,
     this.isConnected = false,
     this.isSystemSoundEnabled = false,
-    this.isOneTtsEnabled = false,  // 默认关闭一栏 TTS
-    this.isTwoTtsEnabled = false,  // 默认关闭二栏 TTS
+    this.isOneTtsEnabled = false, // 默认关闭一栏 TTS
+    this.isTwoTtsEnabled = false, // 默认关闭二栏 TTS
     this.onefontSize = 14,
     this.twofontSize = 14,
     this.panelNumber = 2, // 默认显示第二栏(录音) , 1 显示第一栏(系统音频)
@@ -233,9 +233,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// 切换 ASR 服务（已废弃，现在只使用服务器API）
   void switchAsrService(String serviceType) {
     _log('⚠️ ASR服务切换已废弃，现在统一使用服务器API（豆包同传）');
-    state = state.copyWith(
-      statusMessage: '统一使用服务器API（豆包同传）',
-    );
+    state = state.copyWith(statusMessage: '统一使用服务器API（豆包同传）');
   }
 
   /// 设置输入文本
@@ -444,38 +442,60 @@ class InterpretViewModel extends Notifier<InterpretState> {
           type: 1, // 一栏
         );
 
+        // 添加一个标志来表示翻译是否已经完成
+        bool isTranslationComplete = false;
+
         // 先设置所有回调
         asrService.onTextSrcRecognized = (text, is_final) {
           // 调试日志
           _log(' 📝 原文识别 - is_final: $is_final, text: "$text"');
+
+          // 不再在实时翻译过程中更新UI，只在收到最终结果时更新
+          // 这样可以避免实时翻译时显示单独的片段
+          // if (!isTranslationComplete) {
+          //   // 更新 UI 状态，显示实时原文
+          //   state = state.copyWith(inputOneText: text);
+          // }
         };
 
         asrService.onTextDstRecognized = (text, is_final) {
           // 调试日志
           _log(' 📝 译文识别 - is_final: $is_final, text: "$text"');
+
+          // 不再在实时翻译过程中更新UI，只在收到最终结果时更新
+          // 这样可以避免实时翻译时显示单独的片段
+          // if (!isTranslationComplete) {
+          //   // 更新 UI 状态，显示实时译文
+          //   state = state.copyWith(translatedOneText: text);
+          // }
         };
 
-        // 新增：配对翻译回调（格式化的原文+译文）
-        asrService.onPairTranslationReceived = (formattedText) {
-          _log('📝 ========== 配对翻译回调已触发 ==========');
-          _log('📝 格式化文本长度: ${formattedText.length} 字符');
-          _log('📝 格式化文本内容: "$formattedText"');
-          _log('📝 更新前 - inputOneText: "${state.inputOneText}"');
-          _log('📝 更新前 - translatedOneText: "${state.translatedOneText}"');
+        // 新增：配对翻译回调（格式化后的原文, 译文）
+        asrService.onPairTranslationReceived =
+            (formattedSourceText, formattedTargetText) {
+              _log('📝 ========== 配对翻译回调已触发 ==========');
+              _log('📝 格式化后的累积原文: "$formattedSourceText"');
+              _log('📝 格式化后的累积译文: "$formattedTargetText"');
+              _log('📝 更新前 - inputOneText: "${state.inputOneText}"');
+              _log('📝 更新前 - translatedOneText: "${state.translatedOneText}"');
 
-          // 将格式化的翻译设置为原文和译文区域的内容
-          state = state.copyWith(
-            inputOneText: formattedText,
-            translatedOneText: formattedText,
-            inputOneTextOld: formattedText,
-            translatedOneTextOld: formattedText,
-          );
+              // 不要标记翻译已完成，实时翻译过程中需要继续更新
+              // isTranslationComplete = true;
 
-          _log('📝 更新后 - inputOneText: "${state.inputOneText}"');
-          _log('📝 更新后 - translatedOneText: "${state.translatedOneText}"');
-          _log('✅ 翻译内容已更新到UI');
-          _log('📝 =====================================');
-        };
+              // 将带有特殊分隔符的原文和译文分别设置到对应区域
+              // 这样 AutoScrollTranslationView 组件就能正确地将文本分割成句子列表
+              state = state.copyWith(
+                inputOneText: formattedSourceText,
+                translatedOneText: formattedTargetText,
+                inputOneTextOld: formattedSourceText,
+                translatedOneTextOld: formattedTargetText,
+              );
+
+              _log('📝 更新后 - inputOneText: "${state.inputOneText}"');
+              _log('📝 更新后 - translatedOneText: "${state.translatedOneText}"');
+              _log('✅ 翻译内容已更新到UI');
+              _log('📝 =====================================');
+            };
 
         // 新增：JSON调试回调（显示原始JSON）
         asrService.onJsonReceived = (formattedJson) {
@@ -908,9 +928,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
       );
       _log('   峰值: $peakAmplitude');
       _log('   RMS: $rmsAmplitude');
-      _log(
-        '   重采样后: ${resampledData.isNotEmpty ? resampledData[0] : 0.0}',
-      );
+      _log('   重采样后: ${resampledData.isNotEmpty ? resampledData[0] : 0.0}');
     }
 
     // 🔍 诊断2：统计音频范围（第10个数据块）
@@ -1006,10 +1024,7 @@ class InterpretViewModel extends Notifier<InterpretState> {
   /// - downsampleFactor: 降采样因子（3 表示 48kHz → 16kHz）
   ///
   /// 返回：重采样后的音频数据（16kHz）
-  List<double> _fastResample(
-    List<double> inputData,
-    int downsampleFactor,
-  ) {
+  List<double> _fastResample(List<double> inputData, int downsampleFactor) {
     final outputLength = inputData.length ~/ downsampleFactor;
     final outputData = <double>[];
 
@@ -1195,7 +1210,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
       // 🔧 发送缓冲区剩余的音频数据
       if (_enableRealtimeAsr && _isAsrConnected && _asrAudioBuffer.isNotEmpty) {
         _log('🎤 发送剩余缓冲数据: ${_asrAudioBuffer.length}字节');
-        _getCurrentAsrService().sendAudioData(List.from(_asrAudioBuffer), type: 1);
+        _getCurrentAsrService().sendAudioData(
+          List.from(_asrAudioBuffer),
+          type: 1,
+        );
         _asrAudioBuffer.clear();
       }
 
@@ -1288,10 +1306,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     _log('   二栏 TTS: ${state.isTwoTtsEnabled}');
 
     if (newState) {
-      _getCurrentAsrService().enableTts(type: 1);  // 一栏 TTS
+      _getCurrentAsrService().enableTts(type: 1); // 一栏 TTS
       _log('✅ 一栏 TTS 播报已启用');
     } else {
-      _getCurrentAsrService().disableTts(type: 1);  // 一栏 TTS
+      _getCurrentAsrService().disableTts(type: 1); // 一栏 TTS
       _log('⏸️ 一栏 TTS 播报已禁用');
     }
   }
@@ -1306,10 +1324,10 @@ class InterpretViewModel extends Notifier<InterpretState> {
     _log('   二栏 TTS: $newState');
 
     if (newState) {
-      _getCurrentAsrService().enableTts(type: 2);  // 二栏 TTS
+      _getCurrentAsrService().enableTts(type: 2); // 二栏 TTS
       _log('✅ 二栏 TTS 播报已启用');
     } else {
-      _getCurrentAsrService().disableTts(type: 2);  // 二栏 TTS
+      _getCurrentAsrService().disableTts(type: 2); // 二栏 TTS
       _log('⏸️ 二栏 TTS 播报已禁用');
     }
   }
