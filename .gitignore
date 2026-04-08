@@ -37,6 +37,7 @@ setup/win32/static/postgresql*.exe
 /man/
 /share/
 /src/
+/sounds/
 /vscode/
 .vscode/
 .venv/
