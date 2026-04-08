@@ -23,7 +23,10 @@ class InterpretView extends ConsumerWidget {
   const InterpretView({super.key});
 
   // 语言列表（根据讯飞API限制，目前只支持中英文互译）
-  static const List<String> _languages = ['中文', '英语'];
+  static const List<String> _languages = [
+    '中文',
+    '英语',
+  ];
 
   // 语言简称映射
   static const Map<String, String> _languageCodes = {
@@ -883,18 +886,14 @@ class InterpretView extends ConsumerWidget {
                         controller:
                             TextEditingController(
                                 text: type == 1
-                                    ? state.inputOneText.replaceAll('|||', ' ')
-                                    : state.inputTwoText.replaceAll('|||', ' '),
+                                    ? state.inputOneText
+                                    : state.inputTwoText,
                               )
                               ..selection = TextSelection.fromPosition(
                                 TextPosition(
                                   offset: type == 1
-                                      ? state.inputOneText
-                                            .replaceAll('|||', ' ')
-                                            .length
-                                      : state.inputTwoText
-                                            .replaceAll('|||', ' ')
-                                            .length,
+                                      ? state.inputOneText.length
+                                      : state.inputTwoText.length,
                                 ),
                               ),
                         onChanged: (text) {
@@ -965,17 +964,10 @@ class InterpretView extends ConsumerWidget {
             children: [
               Expanded(
                 child: TextField(
-                  controller:
-                      TextEditingController(
-                          text: translatedText.replaceAll('|||', ' '),
-                        )
-                        ..selection = TextSelection.fromPosition(
-                          TextPosition(
-                            offset: translatedText
-                                .replaceAll('|||', ' ')
-                                .length,
-                          ),
-                        ),
+                  controller: TextEditingController(text: translatedText)
+                    ..selection = TextSelection.fromPosition(
+                      TextPosition(offset: translatedText.length),
+                    ),
                   maxLines: null,
                   textAlignVertical: TextAlignVertical.top,
                   readOnly: true, // 翻译结果只读
@@ -990,7 +982,9 @@ class InterpretView extends ConsumerWidget {
                     ),
                   ),
                   style: TextStyle(
-                    fontSize: type == 1 ? state.onefontSize : state.twofontSize,
+                    fontSize: type == 1
+                        ? state.onefontSize
+                        : state.twofontSize,
                     color: Colors.black87,
                     height: 1.5,
                   ),
@@ -1101,14 +1095,10 @@ class InterpretView extends ConsumerWidget {
             fontSize: fontSize,
             initialText: type == 1 ? state.inputOneText : state.inputTwoText,
             onChanged: (text) {
-              ref
-                  .read(interpretViewModelProvider.notifier)
-                  .setInputText(text, type);
+              ref.read(interpretViewModelProvider.notifier).setInputText(text, type);
             },
             onSubmitted: (text) {
-              ref
-                  .read(interpretViewModelProvider.notifier)
-                  .translateText(text, type);
+              ref.read(interpretViewModelProvider.notifier).translateText(text, type);
             },
           ),
         ),
@@ -1146,18 +1136,14 @@ class InterpretView extends ConsumerWidget {
                         controller:
                             TextEditingController(
                                 text: type == 1
-                                    ? state.inputOneText.replaceAll('|||', ' ')
-                                    : state.inputTwoText.replaceAll('|||', ' '),
+                                    ? state.inputOneText
+                                    : state.inputTwoText,
                               )
                               ..selection = TextSelection.fromPosition(
                                 TextPosition(
                                   offset: type == 1
-                                      ? state.inputOneText
-                                            .replaceAll('|||', ' ')
-                                            .length
-                                      : state.inputTwoText
-                                            .replaceAll('|||', ' ')
-                                            .length,
+                                      ? state.inputOneText.length
+                                      : state.inputTwoText.length,
                                 ),
                               ),
                         onChanged: (text) {
@@ -1217,24 +1203,14 @@ class InterpretView extends ConsumerWidget {
                         controller:
                             TextEditingController(
                                 text: type == 1
-                                    ? state.translatedOneText.replaceAll(
-                                        '|||',
-                                        ' ',
-                                      )
-                                    : state.translatedTwoText.replaceAll(
-                                        '|||',
-                                        ' ',
-                                      ),
+                                    ? state.translatedOneText
+                                    : state.translatedTwoText,
                               )
                               ..selection = TextSelection.fromPosition(
                                 TextPosition(
                                   offset: type == 1
-                                      ? state.translatedOneText
-                                            .replaceAll('|||', ' ')
-                                            .length
-                                      : state.translatedTwoText
-                                            .replaceAll('|||', ' ')
-                                            .length,
+                                      ? state.translatedOneText.length
+                                      : state.translatedTwoText.length,
                                 ),
                               ),
                         maxLines: null,
