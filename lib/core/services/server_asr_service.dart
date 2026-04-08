@@ -34,7 +34,7 @@ class ServerAsrService {
   String? _sessionId;
 
   // 翻译历史（用于配对显示）
-  final List<MapEntry<String, String>> _translationHistory = [];
+  final List<Map<String, dynamic>> _translationHistory = [];
   final Map<int, String> _sourceBuffer =
       {}; // 暂存原文，等待译文配对（segment_index -> text）
   final Map<int, String> _targetBuffer =
@@ -372,7 +372,11 @@ class ServerAsrService {
               // debugPrint('ServerAsrService: 📝 后台返回的累积译文: "$targetText"');
 
               // 添加到翻译历史
-              _translationHistory.add(MapEntry(sourceText, targetText));
+              _translationHistory.add({
+                'segmentIndex': 0, // 最终结果没有segmentIndex，使用0
+                'sourceText': sourceText,
+                'targetText': targetText,
+              });
 
               // 获取格式化后的累积原文和译文
               final formatted = _getFormattedSourceAndTarget();
@@ -400,7 +404,11 @@ class ServerAsrService {
             debugPrint('ServerAsrService: ✅ 翻译结果（旧格式）');
 
             if (sourceText.isNotEmpty && translationText.isNotEmpty) {
-              _translationHistory.add(MapEntry(sourceText, translationText));
+              _translationHistory.add({
+                'segmentIndex': 0, // 旧格式没有segmentIndex，使用0
+                'sourceText': sourceText,
+                'targetText': translationText,
+              });
               // 获取格式化后的累积原文和译文
               final formatted = _getFormattedSourceAndTarget();
               final formattedSourceText = formatted['source']!;
@@ -550,7 +558,7 @@ class ServerAsrService {
     // 收集所有原文
     final sourceBuffer = StringBuffer();
     for (final entry in _translationHistory) {
-      sourceBuffer.write(entry.key.trim());
+      sourceBuffer.write((entry['sourceText'] as String).trim());
       sourceBuffer.write(' ');
     }
     // 按 segmentIndex 顺序添加当前缓冲区中的原文
@@ -571,7 +579,7 @@ class ServerAsrService {
     // 收集所有译文
     final targetBuffer = StringBuffer();
     for (final entry in _translationHistory) {
-      targetBuffer.write(entry.value.trim());
+      targetBuffer.write((entry['targetText'] as String).trim());
       targetBuffer.write(' ');
     }
     // 按 segmentIndex 顺序添加当前缓冲区中的译文
@@ -600,7 +608,11 @@ class ServerAsrService {
       debugPrint('ServerAsrService:    译文: "$targetText"');
 
       // 添加到翻译历史
-      _translationHistory.add(MapEntry(sourceText, targetText));
+      _translationHistory.add({
+        'segmentIndex': segmentIndex,
+        'sourceText': sourceText,
+        'targetText': targetText,
+      });
 
       // 获取格式化后的累积原文和译文
       final formatted = _getFormattedSourceAndTarget();
@@ -641,8 +653,8 @@ class ServerAsrService {
 
     // 分别收集中文和英文句子
     for (final entry in _translationHistory) {
-      final sourceText = entry.key.trim();
-      final targetText = entry.value.trim();
+      final sourceText = (entry['sourceText'] as String).trim();
+      final targetText = (entry['targetText'] as String).trim();
 
       // 检查文本是否包含中文字符
       bool isChineseSource = RegExp(r'[\u4e00-\u9fa5]').hasMatch(sourceText);
@@ -769,8 +781,8 @@ class ServerAsrService {
 
     // 使用最新的翻译对（完整的累积原文和译文）
     final latestEntry = _translationHistory.last;
-    final sourceText = latestEntry.key.trim();
-    final targetText = latestEntry.value.trim();
+    final sourceText = (latestEntry['sourceText'] as String).trim();
+    final targetText = (latestEntry['targetText'] as String).trim();
 
     // 检查文本是否包含中文字符
     bool isChineseSource = RegExp(r'[\u4e00-\u9fa5]').hasMatch(sourceText);
@@ -809,31 +821,54 @@ class ServerAsrService {
       return {'source': '', 'target': ''};
     }
 
-    // 累积所有翻译对的原文和译文
+    // 按照segmentIndex排序
+    final sortedEntries = List<Map<String, dynamic>>.from(_translationHistory);
+    sortedEntries.sort(
+      (a, b) => (a['segmentIndex'] as int).compareTo(b['segmentIndex'] as int),
+    );
+
+    // 按照每50个segmentIndex分割一行
+    final sourceSentences = <String>[];
+    final targetSentences = <String>[];
+
     final sourceBuffer = StringBuffer();
     final targetBuffer = StringBuffer();
+    int lastSegmentIndex = -1;
 
-    for (final entry in _translationHistory) {
-      sourceBuffer.write(entry.key.trim());
+    for (final entry in sortedEntries) {
+      final segmentIndex = entry['segmentIndex'] as int;
+      final sourceText = entry['sourceText'] as String;
+      final targetText = entry['targetText'] as String;
+
+      // 检查是否需要新的一行
+      if (lastSegmentIndex != -1 && segmentIndex % 30 == 0) {
+        // 完成当前行
+        if (sourceBuffer.isNotEmpty) {
+          sourceSentences.add(sourceBuffer.toString().trim());
+          sourceBuffer.clear();
+        }
+        if (targetBuffer.isNotEmpty) {
+          targetSentences.add(targetBuffer.toString().trim());
+          targetBuffer.clear();
+        }
+      }
+
+      // 添加当前翻译对
+      sourceBuffer.write(sourceText.trim());
       sourceBuffer.write(' ');
-      targetBuffer.write(entry.value.trim());
+      targetBuffer.write(targetText.trim());
       targetBuffer.write(' ');
+
+      lastSegmentIndex = segmentIndex;
     }
 
-    final sourceText = sourceBuffer.toString().trim();
-    final targetText = targetBuffer.toString().trim();
-
-    // 检查文本是否包含中文字符
-    bool isChineseSource = RegExp(r'[\u4e00-\u9fa5]').hasMatch(sourceText);
-    bool isChineseTarget = RegExp(r'[\u4e00-\u9fa5]').hasMatch(targetText);
-
-    // 分割句子（实时翻译时，当前句不显示标点）
-    final sourceSentences = isChineseSource
-        ? _splitChineseSentences(sourceText, isCurrentSentence: true)
-        : _splitEnglishSentences(sourceText, isCurrentSentence: true);
-    final targetSentences = isChineseTarget
-        ? _splitChineseSentences(targetText, isCurrentSentence: true)
-        : _splitEnglishSentences(targetText, isCurrentSentence: true);
+    // 处理最后一行
+    if (sourceBuffer.isNotEmpty) {
+      sourceSentences.add(sourceBuffer.toString().trim());
+    }
+    if (targetBuffer.isNotEmpty) {
+      targetSentences.add(targetBuffer.toString().trim());
+    }
 
     // 构建格式化后的文本，使用特殊分隔符分割句子
     final sourceWithSeparator = sourceSentences.join('|||');
